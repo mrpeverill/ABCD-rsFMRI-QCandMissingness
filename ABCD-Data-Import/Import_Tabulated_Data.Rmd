@@ -1,0 +1,884 @@
+---
+output:
+  md_document:
+    variant: markdown
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse); library(ggthemes); theme_set(theme_tufte())
+library(naniar)
+library(UpSetR)
+library(lavaan)
+library(summarytools)
+library(pander)
+set.seed(700574)
+
+st_options(plain.ascii       = TRUE, #leave on for development
+           style             = "grid",
+           dfSummary.silent  = TRUE,
+           footnote          = NA,
+           subtitle.emphasis = TRUE,
+           dfSummary.varnumbers        = FALSE,
+           dfSummary.valid.col         = FALSE,
+           use.x11 = FALSE,
+           dfSummary.graph.magnif      = 0.85) 
+```
+
+
+```{r summarytoolssetup,echo=FALSE,results='asis'}
+st_css(main = TRUE, global = TRUE)
+```
+
+# Appendix A: ABCD Tabulated Data Import
+
+We are extracting the following data structures:
+
+```{r comment=''}
+cat(readLines('ExtractList.txt'), sep = '\n')
+```
+## Import and Recode by table
+
+```{r function}
+docnrows=-1 # set to -1 for the full dataset.
+# The default argument for 'path' should be set to where you saved your ABCD
+# data tables.
+read_abcd<-function(datafile,path="/mnt/box/ABCD_tabulated_data/TabulatedData") {
+  header_a <- read.table(
+    file.path(path,datafile),
+    nrows = 1,
+    header = FALSE,
+    na.strings = c("777","999"),
+    stringsAsFactors = FALSE
+  )
+  # Skip the 2nd line (variable description)
+  a <- read.table(
+    file.path(path,datafile),
+    skip = 2,
+    nrows = docnrows,
+    sep = "\t",
+    comment.char = "",
+    quote = "\"",
+    header = FALSE
+  )
+  colnames(a) <- unlist(header_a)
+  
+  a <- as.data.frame(sapply(a, function(x) {
+    gsub("\"", "", x)
+  }))
+  names(a) <- as.list(sapply(names(a), function(x) {
+    gsub("\"", "", x)
+  }))
+  a %>% select(-collection_title)
+}
+
+#Sum inclusive: returns NA if all values NA, otherwise uses na.rm
+sum_i = function(...) {
+  x<-c(...)
+  if (all(is.na(x))) x[NA_real_] else sum(x, na.rm = TRUE)
+}
+
+subtables<-list()
+
+cheaders=c("subjectkey","interview_date","interview_age","sex","eventname")
+
+```
+
+We are not doing our own scoring on any instrument, so we do not have to make our own missing data rules.
+
+### Neighborhood Factors -- abcd_rhds01
+
+Notably, Taylor et. al. 2020 took issue with some of the loadings used in calculating the ADI (which are draw from a prior work), but others use the original (and provided) loadings. Taylor was concerned that the ADI incorporated median income, but we believe it is worth including. We will take a weighted average per address. So, we need time spent at each address as well as the ADI. We will use the national percentile rank score for ADI (e.g., reshist_addr1_adi_perc). Time spent per address is given as a %-ile (e.g., reshist_addr1_percentile).
+
+We will also include COI-2, which (as opposed to the first version), is comparable across neighborhoods (e.g., reshist_addr1_coi_z_coi_nat).
+
+Update: very few participants (< 200) reported percentage spent at second and third addresses, making it impossible to take a weighted average. More than 11000 participants reported only one address. We will simply average across all reported addresses, which will handle some missing data cases. 
+
+```{r}
+subtables$rhds <- read_abcd("abcd_rhds01.txt") %>%
+  filter(eventname == "baseline_year_1_arm_1") %>%
+  select(c(any_of(cheaders),
+           ends_with("_adi_perc"),
+           ends_with("coi_z_coi_nat"))) %>%
+  mutate(
+    across(reshist_addr1_adi_perc:reshist_addr3_coi_z_coi_nat, as.numeric)
+    ) %>% 
+  mutate(
+      adi = rowMeans(select(.,ends_with("adi_perc")),na.rm=TRUE),
+    coi = rowMeans(select(.,ends_with("coi_nat")),na.rm=TRUE)
+  )
+```
+
+### Trauma Exposure -- ptsd01
+
+Criterion A questionnaire from the KSADS. This is count data, so missing items will simply be omitted from the score.
+
+```{r}
+subtables$ptsd01 <- read_abcd("abcd_ptsd01.txt") %>%
+  select(c(any_of(cheaders),ksads_ptsd_raw_754_p:ksads_ptsd_raw_770_p)) %>% 
+  filter(eventname == "baseline_year_1_arm_1") %>%
+  mutate(across(ksads_ptsd_raw_754_p:ksads_ptsd_raw_770_p,as.numeric)) %>%
+  mutate(ksads_count=rowSums(select(.,starts_with("ksads_ptsd_raw")),na.rm=TRUE),
+         ksads_factor=factor(case_when(ksads_count == 0 ~ "0",
+                                  ksads_count == 1 ~ "1",
+                                  ksads_count >= 2 ~ ">2",
+                                  TRUE ~ NA_character_)))
+
+# Missing values are omitted, but rows where the instrument is completely missing
+# will remain missing
+
+#reorder:
+subtables$ptsd01$ksads_factor<-factor(subtables$ptsd01$ksads_factor,levels=c("0","1",">2"))
+```
+
+### Demographics 
+
+#### pdem02
+
+```{r,warning=FALSE}
+# Function to recode education variable
+edcoding<-function(x) {
+  x<-as.numeric(x)
+  factor(case_when(x < 13 ~ 1,
+            x < 15 ~ 2,
+            x < 18 ~ 3,
+            x < 19 ~ 4,
+            x <= 21 ~ 5,
+            x == 777 ~ NA_real_,
+            x == 999 ~ NA_real_),
+         levels=1:5,
+         labels=c("< HS",
+                  "HS Graduate",
+                  "Some College",
+                  "College Degree",
+                  "Graduate Degree"),
+         ordered=TRUE)
+}
+
+qmax<- function(x) { # We use this to suppress a warning when all values are NA.
+  if(all(is.na(x))) {return(NA)}
+  max(x,na.rm=TRUE)
+}
+
+# Function to recode education variable without collapsing bins.
+edcoding_full <- function(x) {
+  factor(
+    case_when(
+      x == "777" ~ NA_real_,
+      x == "999" ~ NA_real_,
+      is.na(x) ~ NA_real_,
+      TRUE ~ as.numeric(x)
+    ),
+    levels = 0:21,
+    labels = c(
+      "Never attended/Kindergarten only",
+      "1st grade",
+      "2nd grade",
+      "3rd grade",
+      "4th grade",
+      "5th grade",
+      "6th grade",
+      "7th grade",
+      "8th grade",
+      "9th grade",
+      "10th grade",
+      "11th grade",
+      "12th grade",
+      "High school graduate",
+      "GED or equivalent",
+      "Some college",
+      "Associate degree: Occupational",
+      "Associate degree: Academic Program",
+      "Bachelor degree",
+      "Master degree",
+      "Professional School",
+      "Doctoral Degree"
+    ),
+    ordered = TRUE
+  )
+}
+
+subtables$pdem02 <- read_abcd("pdem02.txt") %>%
+  filter(eventname == "baseline_year_1_arm_1") %>%
+  select(
+    c(
+      any_of(cheaders),
+      eventname,
+      demo_comb_income_v2,
+      demo_prnt_ed_v2,
+      demo_prtnr_ed_v2,
+      demo_race_a_p___10:demo_ethn2_v2
+    )
+  ) %>%
+  # Factorize Income (full)
+  mutate(
+    demo_comb_income_v2=as.numeric(demo_comb_income_v2),
+    household.income.full = factor(
+      case_when(
+        demo_comb_income_v2 == 1  ~ "Less than $5,000",
+        demo_comb_income_v2 == 2  ~ "$5,000 through $11,999",
+        demo_comb_income_v2 == 3  ~ "$12,000 through $15,999",
+        demo_comb_income_v2 == 4  ~ "$16,000 through $24,999",
+        demo_comb_income_v2 == 5  ~ "$25,000 through $34,999",
+        demo_comb_income_v2 == 6  ~ "$35,000 through $49,999",
+        demo_comb_income_v2 == 7  ~ "$50,000 through $74,999",
+        demo_comb_income_v2 == 8  ~ "$75,000 through $99,999",
+        demo_comb_income_v2 == 9  ~ "$100,000 through $199,999",
+        demo_comb_income_v2 == 10 ~ "$200,000 and greater",
+        TRUE ~ NA_character_
+      )
+    ),
+    # Recode
+    household.income = factor(
+      case_when(
+        demo_comb_income_v2 <= 4 ~ "$0 to $25k",
+        demo_comb_income_v2 <= 6 ~ "$25k to $50k",
+        demo_comb_income_v2 <= 7 ~ "$50k to $75k",
+        demo_comb_income_v2 == 8 ~ "$75k to $100k",
+        demo_comb_income_v2 == 9 ~ "$100k to $200k",
+        demo_comb_income_v2 == 10 ~ "Over $200k",
+        TRUE ~ NA_character_
+      )
+    )
+  ) %>%
+  mutate(across(demo_race_a_p___10:demo_ethn_v2, as.numeric)) %>%
+  # Give Race/Ethnicity Vars legible names
+  rename(race.iden.note = demo_race_notes_v2) %>%
+  rename(ethn.iden.hisp = demo_ethn_v2) %>%
+  rename(ethn.iden.hisp.which = demo_ethn2_v2) %>%
+  # Recode Ethnicity
+  mutate(
+    ethn.iden.hisp = case_when(ethn.iden.hisp == 1 ~ 1,
+                               ethn.iden.hisp == 2 ~ 0,
+                               TRUE ~ NA_real_),
+    ethn.iden.hisp.which = factor(
+      ethn.iden.hisp.which,
+      levels = c(10, 12, 13, 14, 15, 18, 19, 20, 40, 41),
+      labels = c(
+        "Puerto Rican",
+        "Dominican",
+        "Mexican",
+        "Mexican American",
+        "Chicano",
+        "Cuban",
+        "Cuban American",
+        "Central or South American",
+        "Other Latin American",
+        "Other Hispanic"
+      )
+    )
+  ) %>%
+  rename(
+    "race.iden.white" = "demo_race_a_p___10",
+    "race.iden.black" = "demo_race_a_p___11",
+    "race.iden.americanindian" = "demo_race_a_p___12",
+    "race.iden.alaskanative" = "demo_race_a_p___13",
+    "race.iden.nativehawaiian" = "demo_race_a_p___14",
+    "race.iden.guamanian" = "demo_race_a_p___15",
+    "race.iden.samoan" = "demo_race_a_p___16",
+    "race.iden.opacificislander" = "demo_race_a_p___17",
+    "race.iden.asianindian" = "demo_race_a_p___18",
+    "race.iden.filipino" = "demo_race_a_p___19",
+    "race.iden.chinese" = "demo_race_a_p___20",
+    "race.iden.japanese" = "demo_race_a_p___21",
+    "race.iden.korean" = "demo_race_a_p___22",
+    "race.iden.vietnamese" = "demo_race_a_p___23",
+    "race.iden.otherasian" = "demo_race_a_p___24",
+    "race.iden.other" = "demo_race_a_p___25",
+    "race.iden.refuse" = "demo_race_a_p___77",
+    "race.iden.dontknow" = "demo_race_a_p___99"
+  ) %>% 
+rowwise() %>%
+  # Calculate max parent education
+  mutate(
+    p.edu = max(
+      edcoding(demo_prnt_ed_v2),
+      edcoding(demo_prtnr_ed_v2),
+      na.rm = TRUE
+    ),
+    p.edu.full = max(
+      edcoding_full(demo_prnt_ed_v2),
+      edcoding_full(demo_prtnr_ed_v2),
+      na.rm = TRUE
+    )
+  )
+
+subtables$pdem02$household.income<-factor(subtables$pdem02$household.income,levels=c("$0 to $25k",
+                                                         "$25k to $50k",
+                                                         "$50k to $75k",
+                                                         "$75k to $100k",
+                                                         "$100k to $200k",
+                                                         "Over $200k"))
+```
+
+
+#### acspsw -- Family ID, derived race, propensity weights
+
+A 5 category, census compatible, derived race variable is present in the weights table. This table also includes the family ID.
+
+```{r}
+subtables$acspsw <- read_abcd("acspsw03.txt") %>%
+  filter(eventname == "baseline_year_1_arm_1") %>%
+  select(c(any_of(cheaders),
+           race_ethnicity,
+           rel_family_id,
+           acs_raked_propensity_score)) %>% 
+  mutate(race_ethnicity.factor = factor(race_ethnicity,
+                                        levels=1:5,
+                                        labels = c("White",
+                                                   "Black",
+                                                   "Hispanic",
+                                                   "Asian",
+                                                   "Other")),
+         acs_raked_propensity=as.numeric(acs_raked_propensity_score))
+#race_ethnicity
+#rel_family_id
+```
+
+### Pubertal Development (abcd_ssphy01)
+
+We need:
+
+* pds_y_ss_female_category
+* pds_c_ss_female_category
+* pds_y_ss_male_category
+* pds_c_ss_male_category
+
+
+```{r}
+ssphy01 <- read_abcd("abcd_ssphy01.txt") %>%
+  filter(eventname == "baseline_year_1_arm_1") %>%
+  mutate(across(pds_y_ss_male_category:pds_y_ss_male_cat_2_nt,as.numeric)) %>%
+  select(c(any_of(cheaders),pds_y_ss_male_category,pds_y_ss_female_category))
+
+ssphp01 <- read_abcd("abcd_ssphp01.txt") %>%
+  filter(eventname == "baseline_year_1_arm_1") %>%
+  mutate(across(sds_p_ss_dims:pds_p_ss_male_cat_2_nt,as.numeric)) %>%
+  select(c(any_of(cheaders),pds_p_ss_male_category,pds_p_ss_female_category))
+
+pcombine<-full_join(ssphy01,ssphp01)
+pcombine <- pcombine %>% mutate(
+  pds_category=case_when(!is.na(pds_p_ss_female_category) ~ pds_p_ss_female_category,
+                         !is.na(pds_p_ss_male_category) ~ pds_p_ss_male_category,
+                         !is.na(pds_y_ss_female_category) ~ pds_y_ss_female_category,
+                         !is.na(pds_y_ss_male_category) ~ pds_y_ss_male_category,
+                         TRUE ~ NA_real_)) %>% 
+  mutate(pds_category=factor(pds_category,
+                             levels = 1:5,
+                             labels=c("pre-pubertal",
+                                      "early puberty",
+                                      "mid puberty",
+                                      "late puberty",
+                                      "post pubertal")))
+
+# Before we composite -- what are the missingness conditions?
+gg_miss_upset(pcombine %>% select(starts_with("pds")))
+
+# There are missing values, for each birth sex, where nothing is available, and
+# where either parent or child report is not available. This code will need to 
+# be revised if any participant has both male and female pdp data.
+
+subtables$pcombine<-pcombine
+rm(ssphp01,ssphy01,pcombine)
+```
+
+
+### CBCL and p factor -- cbcls01
+
+CBCL (parent report) summary scores Here we read CBCL summary data. P factor, INT, and EXT are calculated as in Brislin (2021). The t scored subscales are used. All sub-scales load on to a general p factor. EXT is constructed from delinquent and aggressive behavior scales. The INT specific factor included the withdrawn, somatic complaints, and anxious/depressed scales. The CBCL has its own missing data rules so we need not use our own. 
+
+```{r}
+cbcls<- read_abcd("abcd_cbcls01.txt") %>%
+  filter(eventname == "baseline_year_1_arm_1") %>%
+  mutate(across(ends_with(c("_r","_t","_nm")),as.numeric)) %>% 
+  select(c(any_of(cheaders),
+           cbcl_scr_syn_anxdep_t,
+           cbcl_scr_syn_withdep_t,
+           cbcl_scr_syn_somatic_t,
+           cbcl_scr_syn_social_t,
+           cbcl_scr_syn_thought_t,
+           cbcl_scr_syn_attention_t,
+           cbcl_scr_syn_rulebreak_t,
+           cbcl_scr_syn_aggressive_t,
+           cbcl_scr_syn_totprob_t,
+           cbcl_scr_syn_internal_t,
+           cbcl_scr_syn_external_t))
+
+#check for missing data problems
+if(any(is.na(cbcls %>% select(starts_with("cbcl_scr"))))) {
+  cbcls %>% select(starts_with("cbcl_scr")) %>% 
+    as_shadow_upset() %>% upset()
+  } else {
+    print("No missing CBCL values found.")
+  }
+
+p.model <- '
+pfactor         =~ cbcl_scr_syn_anxdep_t + cbcl_scr_syn_withdep_t + cbcl_scr_syn_somatic_t + cbcl_scr_syn_social_t + cbcl_scr_syn_thought_t + cbcl_scr_syn_attention_t + cbcl_scr_syn_rulebreak_t + cbcl_scr_syn_aggressive_t
+INT             =~ cbcl_scr_syn_anxdep_t + cbcl_scr_syn_withdep_t + cbcl_scr_syn_somatic_t
+EXT             =~ cbcl_scr_syn_rulebreak_t + cbcl_scr_syn_aggressive_t
+pfactor         ~~ 0*INT
+pfactor         ~~ 0*EXT
+INT             ~~ 0*EXT
+'
+
+p.modelfit <- cfa(p.model, data = cbcls, information="observed")
+cfapreds<-as.data.frame(lavPredict(p.modelfit))
+cfapreds$lavaanid<-inspect(p.modelfit,"case.idx")
+
+cbcls$lavaanid<-1:nrow(cbcls)
+subtables$cbcls <- cbcls %>%
+  full_join(cfapreds,by="lavaanid") %>% 
+  select(c(any_of(cheaders),
+           cbcl_scr_syn_anxdep_t:cbcl_scr_syn_external_t,
+           pfactor:EXT))
+  
+```
+
+### Cognitive Functioning
+
+There are many approaches to modeling general cognitive ability in ABCD. Sripada (2021) validated and used a bifactor model with the following measures (sorted by factor):
+
+* Verbal/Spatial:
+  * WISC Vocabulary
+  * WISC Reading
+  * WISC Working Memory
+  * WISC Matrix Reasoning
+  * WISC Spatial Rotation
+* Speed/Flexibility:
+  * Flanker Task
+  * Card Sort 
+  * Processing Speed
+* Learning/Memory:
+  * Memory Short Delay
+  * Memory Long Delay
+  * Episodic Memory
+
+However, we don't know much about how they scored this, (scaled or raw, how did they score flanker, etc.)
+
+Clark et al. cites Sripada but did something different: "General cognitive ability (GCA) scores were computed by fitting a bifactor model to behavioral tasks from the National Institutes of Health toolbox; the Rey Auditory Verbal Learning Task; the Weschler Intelligence Scale for Children, fifth edition; and the “Little Man” task (for more details on the GCA variables, see Sripada, Angstadt, Rutherford, & Taxali, 2020)."
+
+Marek et al. (2019) used the 'cognition composite' score from the NIH toolbox cognition battery. 
+
+Thompson et al. uses a bayesian probabilistic principal components analysis to get a 3 factor model. However, they did not use the whole sample. 
+Ultimately, we are not interested in the factor structure of cognition and are better served by using well established single indices of cognition. Thus, we will use two better validated measures: the scaled score from the WISC-V matrix reasoning task and the cognition composite score from the NIH toolbox cognition battery.
+
+#### ps01
+
+This Table contains results from Pearson Instruments. We just want matrix reasoning.
+
+```{r}
+subtables$ps01 <- read_abcd("abcd_ps01.txt") %>%
+  filter(eventname == "baseline_year_1_arm_1") %>%
+  mutate(across(pea_ravlt_sd_trial_i_tc:pea_wiscv_item_32_rs,as.numeric)) %>%
+  select(c(any_of(cheaders),pea_wiscv_tss))
+```
+
+
+#### tbss01
+
+NIH toolbox data. We want the Flanker task data (as a measure of inhibition), the general crystal intelligence score, and the general cognitive score. 
+
+```{r}
+subtables$tbss01 <- read_abcd("abcd_tbss01.txt") %>%
+  filter(eventname == "baseline_year_1_arm_1") %>% 
+  select(c(any_of(cheaders),
+           nihtbx_flanker_agecorrected,
+           nihtbx_cryst_agecorrected,
+           nihtbx_totalcomp_agecorrected)) %>%
+  mutate(across(nihtbx_flanker_agecorrected:nihtbx_totalcomp_agecorrected,as.numeric))
+```
+
+### Site
+
+site_id_l is in longitudinal tracking instrument
+
+```{r}
+subtables$lt01<- read_abcd("abcd_lt01.txt") %>%
+  filter(eventname == "baseline_year_1_arm_1") %>% 
+  select(c(any_of(cheaders),site_id_l)) %>% 
+  mutate(site_id_l=as_factor(site_id_l))
+```
+
+### Image Control Data
+
+mriqcrp10301 contains basic QC information about T1 and rsfmri which are used to determine eligibility for the tabulated data.
+
+```{r}
+subtables$mriiqc<-read_abcd("mriqcrp10301.txt") %>%
+  filter(eventname == "baseline_year_1_arm_1") %>% 
+  select(c(any_of(cheaders),
+           iqc_t1_total_ser,
+           iqc_t1_ok_ser,
+           iqc_rsfmri_ok_tr,
+           iqc_rsfmri_ok_ser,
+           iqc_rsfmri_total_ser)) %>%
+  mutate(t1_received=iqc_t1_total_ser>0,
+         rsfmri_received=iqc_rsfmri_total_ser>0,
+         t1_minok=iqc_t1_ok_ser>0,
+         rsfmri_minok=iqc_rsfmri_ok_ser>0)
+```
+
+An additional table, mri_imgincl, has DAIC's recommendations about exclusions.
+
+```{r}
+subtables$imgincl <- read_abcd("abcd_imgincl01.txt")  %>%
+  filter(eventname == "baseline_year_1_arm_1") %>%
+  select(subjectkey, imgincl_t1w_include, imgincl_rsfmri_include) %>%
+  mutate(across(starts_with("imgincl"), \(x) {x==1})) %>%
+  mutate(imgincl=imgincl_t1w_include & imgincl_rsfmri_include)
+```
+
+### BMI
+
+```{r}
+subtables$ant01<- read_abcd("abcd_ant01.txt") %>%
+  filter(eventname == "baseline_year_1_arm_1") %>% 
+  select(c(any_of(cheaders),anthroheightcalc,ends_with("lb"))) %>%
+  mutate(across(anthroheightcalc:anthroweight3lb,~as.numeric(.))) %>% 
+  # data dictionary gives a qualitative description of this calculation, as well 
+  # as a formula. They are not the same. This is adaptation of the formula.
+  mutate(anthroweightcalc=rowMeans(select(.,c(anthroweight1lb,anthroweight2lb,anthroweight3lb)),na.rm=TRUE),
+         bmi=703*anthroweightcalc/anthroheightcalc^2)
+
+```
+
+### Scanner
+
+```{r}
+subtables$scanner<-read_abcd("abcd_mri01.txt") %>% 
+  filter(eventname == "baseline_year_1_arm_1") %>% 
+  select(c(any_of(cheaders),mri_info_manufacturer,mri_info_manufacturersmn)) %>% 
+  mutate(mri_manu=as.factor(mri_info_manufacturer),
+         mri_model=as.factor(mri_info_manufacturersmn))
+```
+
+## Merge Tabulated Data
+
+```{r}
+tabfull <- Reduce(function(x, y) full_join(x, y), subtables)
+```
+
+## Tabulated Data Integrity
+
+For each of our constructs, we should check whether the coding is correct (i.e., how the data is transformed from the original) and whether the variables are typed correctly (i.e., string, numeric, factor). Simultaneously, we will make a list of columns to be included in the final dataframe.
+
+### ID and Common Variables
+```{r} 
+
+tabfull<- tabfull %>% mutate(
+  subjectkey=as.factor(subjectkey),
+  interview_date=as.Date(interview_date,format="%m/%d/%Y"),
+  interview_age=as.integer(interview_age),
+  sex=as.factor(sex)
+)
+
+tabcols<-list()
+tabcols$id<-c("subjectkey","interview_date","interview_age","sex")
+```
+
+```{r echo=FALSE,results='asis'}
+print(dfSummary(tabfull[,tabcols$id]))
+```
+
+There are `r sum(which(duplicated(tabfull$subjectkey)))` duplicated subject keys.
+
+### ADI + COI
+
+Let's check one rows for each pattern of missingness in the data (i.e., pattern of reported addresses)
+
+```{r}
+adicalc <- tabfull %>% select(c(ends_with("adi_perc"),adi)) %>%
+  rename_all(~stringr::str_replace(.,"^reshist_addr","a")) %>% #for brevity
+  mutate(across(.fns = list(miss = ~is.na(.)))) %>%
+  distinct(across(ends_with("_miss")),.keep_all=TRUE) %>%
+  select(-ends_with("_miss"))
+
+coicalc <- tabfull %>% select(c(ends_with("coi_nat"),coi)) %>%
+  rename_all(~stringr::str_replace(.,"^reshist_addr","a")) %>% #for brevity
+  mutate(across(.fns = list(miss = ~is.na(.)))) %>%
+  distinct(across(ends_with("_miss")),.keep_all=TRUE) %>%
+  select(-ends_with("_miss"))
+
+gg_miss_upset(tabfull %>% select(c(ends_with("adi_perc"),adi)),nsets=7)
+#pander(adicalc,caption="Example ADI calculations: All Missingness Profiles")
+adicalc
+
+gg_miss_upset(tabfull %>% select(c(ends_with("coi_nat"),coi)))
+#pander(coicalc,caption="Example COI calculations: All Missingness Profiles")
+coicalc
+
+tabcols$neighborhood<-c("adi","coi")
+```
+
+Address percentages are mostly not provided. This is unlikely to bias our results much, as few participants reported COI or ADI values beyond one address.
+
+```{r echo=FALSE,results='asis'}
+dfSummary(tabfull[,tabcols$neighborhood])
+```
+
+### KSADS
+
+```{r}
+pander(
+  tabfull %>%
+    select(ksads_ptsd_raw_754_p:ksads_factor) %>%
+    distinct() %>%
+    slice(1:10) %>% # We may want more or different rows later
+    rename_with(
+      stringr::str_replace,
+      pattern = "^ksads_ptsd_raw_\\d{3}_p",
+      replacement = as.character(1:19)
+    ),
+  caption = "KSADS count 10 examples"
+)
+
+tabcols$ksads<-c("ksads_factor")
+```
+
+```{r echo=FALSE,results='asis'}
+dfSummary(tabfull[,tabcols$ksads])
+```
+
+### Income
+
+```{r}
+pander(tabfull %>%
+         select(c(demo_comb_income_v2,
+                  household.income.full,
+                  household.income)) %>% 
+         #Print all possible income inputs:
+         distinct(demo_comb_income_v2,.keep_all = TRUE) %>%
+         arrange(demo_comb_income_v2),
+       caption="Income Recode: All Possible Inputs")
+
+tabcols$income<-c("household.income","household.income.full")
+```
+
+```{r echo=FALSE,results='asis'}
+dfSummary(tabfull[,tabcols$income])
+```
+
+### Parent Education
+
+```{r}
+pander(tabfull %>%
+         select(c(demo_prnt_ed_v2,
+                  demo_prtnr_ed_v2,
+                  p.edu,
+                  p.edu.full)) %>%
+         #Print up to 20 possible education inputs:
+         distinct(demo_prnt_ed_v2,demo_prtnr_ed_v2,.keep_all = TRUE) %>% 
+         slice(1:20),
+       caption="Parental Education Recode Examples: 20 Distinct Examples")
+
+tabcols$ped<-c("p.edu","p.edu.full")
+```
+
+```{r echo=FALSE,results='asis'}
+dfSummary(tabfull[,tabcols$ped])
+```
+
+### Race/Ethnicity
+
+The five category re-coding is provided in the dataset rather than calculated here. The supplemental variables are poorly named in the original, so in addition to the sorts of checks we have been doing, we will also compare carefully the binary identification variables against the code book.
+
+```{r}
+pander(tabfull %>%
+         select(c(race.iden.white:ethn.iden.hisp.which,
+                  race_ethnicity,
+                  race_ethnicity.factor)) %>%
+         rename_all(~stringr::str_replace(.,"^race.iden.","i.")) %>%
+         #Print up to 20 possible education inputs:
+         distinct(across(i.white:i.dontknow),.keep_all = TRUE) %>% 
+         slice(1:20),
+       caption="Race/Ethnicity Recode Examples: 20 Distinct Examples") 
+
+tabcols$re<-c("race_ethnicity.factor")
+```
+
+```{r echo=FALSE,results='asis'}
+dfSummary(tabfull[,tabcols$re])
+```
+
+### Population weighting
+
+The important thing here is that no one should be missing.
+
+```{r}
+tabcols$weights<-c("acs_raked_propensity")
+dfSummary(tabfull[,tabcols$weights])
+```
+
+### Pubertal Development
+```{r}
+pander(tabfull %>%
+         select(starts_with("pds_")) %>%
+         #Print all the missing data patterns:
+         mutate(across(.fns = list(miss = ~is.na(.)))) %>%
+         distinct(across(ends_with("_miss")),.keep_all=TRUE) %>%
+         select(-ends_with("_miss")),
+       caption="Pubertal Status Recode: All Missingness Profiles")
+
+tabcols$pds<-c("pds_category")
+any(!is.na(subtables$pcombine$pds_p_ss_female_category) & !is.na(subtables$pcombine$pds_p_ss_male_category))
+any(!is.na(subtables$pcombine$pds_y_ss_female_category) & !is.na(subtables$pcombine$pds_y_ss_male_category))
+```
+
+```{r echo=FALSE,results='asis'}
+dfSummary(tabfull[,tabcols$pds])
+```
+
+### CBCL and P factor
+
+We can verify this model by checking correlations against the original subscale scores. A plot of missingness, above, already shows that CBCL data is either all there or all missing, which is convenient.
+
+```{r}
+round(cor(subtables$cbcls %>% select(c(cbcl_scr_syn_anxdep_t:cbcl_scr_syn_external_t,pfactor:EXT)),
+use="complete.obs")[1:11,12:14],
+digits=2)
+
+tabcols$cbcl<-c("pfactor","INT","EXT")
+```
+
+### Cognitive Functioning
+
+No recoding was performed.
+
+```{r}
+tabcols$cf <-
+  c(
+    "nihtbx_flanker_agecorrected",
+    "nihtbx_cryst_agecorrected",
+    "nihtbx_totalcomp_agecorrected",
+    "pea_wiscv_tss"
+  )
+```
+
+```{r echo=FALSE,results='asis'}
+dfSummary(tabfull[,tabcols$cf])
+```
+
+
+### Site
+
+site_id_l
+
+```{r}
+tabcols$site <- c("site_id_l")
+```
+
+```{r echo=FALSE,results='asis'}
+dfSummary(tabfull[,tabcols$site])
+```
+
+### Image Inclusion
+
+65 participants have missing values for iqc_t1_ok_ser -- 6 because they were missing in the original table and 59 because they are not in the full tabulated data file. They should be coded as 0/minok=FALSE.  
+
+
+```{r}
+tabfull <- tabfull %>% mutate(
+  across(c(ends_with("_minok"),ends_with("_received")), ~ replace_na(.,FALSE))
+)
+
+pander(tabfull %>% 
+         select(iqc_t1_total_ser:rsfmri_minok) %>%
+         select(matches("t1")) %>% 
+         distinct())
+
+pander(tabfull %>% 
+         select(iqc_t1_total_ser:rsfmri_minok) %>%
+         select(matches("rsfmri")) %>% 
+         distinct())
+
+tabfull <- tabfull %>%  mutate(
+  ABCD_rsfmri_QC1 = rsfmri_minok & t1_minok,
+  mri_received = rsfmri_received & t1_received
+)
+
+pander(tabfull %>% select(c(ends_with("ok"),ABCD_rsfmri_QC1)) %>% distinct())
+pander(tabfull %>% select(ends_with("received")) %>% distinct())
+
+tabcols$mriiqc <- c("mri_received","ABCD_rsfmri_QC1")
+```
+
+Now the second table:
+
+
+```{r}
+tabfull <- tabfull %>% mutate(
+  across(c(ends_with("_include"),imgincl), ~ replace_na(.,FALSE)))
+
+tabfull <- tabfull %>%  mutate(
+  ABCD_rsfmri_QC2 = imgincl
+)
+
+pander(tabfull %>% count(ABCD_rsfmri_QC2))
+
+tabcols$imgincl <- c("imgincl_t1w_include","imgincl_rsfmri_include","ABCD_rsfmri_QC2")
+```
+
+```{r echo=FALSE,results='asis'}
+dfSummary(tabfull[,tabcols$imgincl])
+```
+
+### BMI
+
+```{r}
+tabcols$bmi<-c("bmi","anthroweightcalc","anthroheightcalc")
+
+dfSummary(tabfull[,tabcols$bmi])
+```
+
+### Scanner
+
+```{r}
+tabcols$scanner<-c("mri_manu","mri_model")
+
+dfSummary(tabfull[,tabcols$scanner])
+
+```
+
+## Filter Tabulated Data
+
+```{r}
+targetnames<-Reduce(function(x, y) c(x, y), tabcols)
+tab <- tabfull %>% select(all_of(targetnames))
+pander(names(tab))
+```
+
+## Supplementary BMI Calculation
+
+Calculate age corrected bmi z scores. Some extreme values result from participants with very innacurate heights.
+
+```{r}
+#Get bmi
+tab$bmiAgeZ <- 
+  zscorer::addWGSR(
+    data = tab %>% mutate(
+      sex=case_match(sex, "M" ~ 1,"F" ~ 2),
+      weight=anthroweightcalc/2.20462,
+      height=anthroheightcalc*2.54,
+      age=interview_age*30.437),
+    sex = "sex",
+    firstPart = "weight",
+    secondPart = "height",
+    thirdPart = "age",
+    index = "bfa",
+    output = "bmiAgeZ",
+    digits = 4
+  )$bmiAgeZ
+
+tab %>% select(c(subjectkey,bmi:anthroheightcalc,bmiAgeZ)) %>% 
+  filter((bmi > 80) | bmiAgeZ > 10) 
+
+tab[tab$bmi > 80 & !is.na(tab$bmi),"bmi"] <- NA
+tab[tab$bmiAgeZ > 10 & !is.na(tab$bmiAgeZ),"bmiAgeZ"] <- NA
+```
+
+## Save
+
+```{r}
+saveRDS(tab,"../RDS/tabulateddata.Rds")
+```
