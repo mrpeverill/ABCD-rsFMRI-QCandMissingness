@@ -635,52 +635,54 @@ tabcols<-list()
 tabcols$id<-c("subjectkey","interview_date","interview_age","sex")
 ```
 
-Data Frame Summary\
-tabfull\
-Dimensions: 11876 x 4\
-Duplicates: 0
+### Data Frame Summary
 
-  -------------------------------------------------------------------------------
-  Variable         Stats / Values     Freqs (% of      Graph            Missing
-                                      Valid)                            
-  ---------------- ------------------ ---------------- ---------------- ---------
-  subjectkey       1\.                1 ( 0.0%) 1 (                     0 (0.0%)
-  \[factor\]       NDAR_INV***REMOVED***   0.0%) 1 ( 0.0%)                   
-                   2.                 1 ( 0.0%) 1 (                     
-                   NDAR_INV***REMOVED***   0.0%) 1 ( 0.0%)                   
-                   3.                 1 ( 0.0%) 1 (                     
-                   NDAR_INV***REMOVED***   0.0%) 1 ( 0.0%)                   
-                   4.                 1 ( 0.0%) 11866                   
-                   NDAR_INV***REMOVED***   (99.9%)                           
-                   5.                                                   
-                   NDAR_INV***REMOVED***                                     
-                   6.                                                   
-                   NDAR_INV***REMOVED***                                     
-                   7.                                                   
-                   NDAR_INV***REMOVED***                                     
-                   8.                                                   
-                   NDAR_INV***REMOVED***                                     
-                   9.                                                   
-                   NDAR_INV***REMOVED***                                     
-                   10.                                                  
-                   NDAR_INV***REMOVED***                                     
-                   \[ 11866 others \]                                   
+#### tabfull
 
-  interview_date   min : 2016-09-01   756 distinct     . : . . . : : :  0 (0.0%)
-  \[Date\]         med : 2017-11-06   values           : : : : : : : :  
-                   max : 2018-10-15                    : : : : : : : :  
-                   range : 2y 1m 14d                   : : : : : : : :  
-                                                       : : : : : : :    
+**Dimensions:** 11876 x 4\
+**Duplicates:** 0
 
-  interview_age    Mean (sd) : 119    27 distinct      : : : : : : : :  0 (0.0%)
-  \[integer\]      (7.5) min \< med   values           : . : : . : . :  
-                   \< max: 107 \< 119                  . : : : : : : :  
-                   \< 133 IQR (CV) :                   : : : : : : : :  
-                   14 (0.1)                            : : : : :        
+  -------------------------------------------------------------------------------------
+  Variable          Stats / Values      Freqs (% of     Graph                 Missing
+                                        Valid)                                
+  ----------------- ------------------- --------------- --------------------- ---------
+  subjectkey\       1\.                 1 ( 0.0%)\      \                     0\
+  \[factor\]        NDAR_INV***REMOVED***\   1 ( 0.0%)\      \                     (0.0%)
+                    2.                  1 ( 0.0%)\      \                     
+                    NDAR_INV***REMOVED***\   1 ( 0.0%)\      \                     
+                    3.                  1 ( 0.0%)\      \                     
+                    NDAR_INV***REMOVED***\   1 ( 0.0%)\      \                     
+                    4.                  1 ( 0.0%)\      \                     
+                    NDAR_INV***REMOVED***\   1 ( 0.0%)\      \                     
+                    5.                  1 ( 0.0%)\      \                     
+                    NDAR_INV***REMOVED***\   1 ( 0.0%)\      \                     
+                    6.                  11866 (99.9%)   IIIIIIIIIIIIIIIIIII   
+                    NDAR_INV***REMOVED***\                                         
+                    7.                                                        
+                    NDAR_INV***REMOVED***\                                         
+                    8.                                                        
+                    NDAR_INV***REMOVED***\                                         
+                    9.                                                        
+                    NDAR_INV***REMOVED***\                                         
+                    10.                                                       
+                    NDAR_INV***REMOVED***\                                         
+                    \[ 11866 others \]                                        
 
-  sex \[factor\]   1\. F 2. M         5680 (47.8%)     IIIIIIIII        0 (0.0%)
-                                      6196 (52.2%)     IIIIIIIIII       
-  -------------------------------------------------------------------------------
+  interview_date\   min : 2016-09-01\   756 distinct          . : .   .\      0\
+  \[Date\]          med : 2017-11-06\   values              . : : : : : : :\  (0.0%)
+                    max : 2018-10-15\                       : : : : : : : :\  
+                    range : 2y 1m 14d                     : : : : : : : : :\  
+                                                        : : : : : : : : : :   
+
+  interview_age\    Mean (sd) : 119     27 distinct     :\                    0\
+  \[integer\]       (7.5)\              values          : :   : :   :   :\    (0.0%)
+                    min \< med \< max:\                 : : . : : . : . : .\  
+                    107 \< 119 \< 133\                  : : : : : : : : : :\  
+                    IQR (CV) : 14 (0.1)                 : : : : : : : : : :   
+
+  sex\              1\. F\              5680 (47.8%)\   IIIIIIIII\            0\
+  \[factor\]        2. M                6196 (52.2%)    IIIIIIIIII            (0.0%)
+  -------------------------------------------------------------------------------------
 
 There are 0 duplicated subject keys.
 
@@ -763,26 +765,31 @@ Address percentages are mostly not provided. This is unlikely to bias
 our results much, as few participants reported COI or ADI values beyond
 one address.
 
-Data Frame Summary\
-tabfull\
-Dimensions: 11876 x 2\
-Duplicates: 6916
+### Data Frame Summary
 
-  ------------------------------------------------------------------------------
-  Variable      Stats / Values      Freqs (% of       Graph            Missing
-                                    Valid)                             
-  ------------- ------------------- ----------------- ---------------- ---------
-  adi           Mean (sd) : 40.1    259 distinct      : . . : : : : :  863
-  \[numeric\]   (26.8) min \< med   values            : : : : : : : :  (7.3%)
-                \< max: 1 \< 34 \<                    : . . . : : : :  
-                100 IQR (CV) : 37                     : : : : : : :    
-                (0.7)                                                  
+#### tabfull
 
-  coi           Mean (sd) : 0 (0)   4844 distinct     : . : . . : : :  1093
-  \[numeric\]   min \< med \< max:  values            : : : : : . . :  (9.2%)
-                -0.1 \< 0 \< 0.1                      : : : : : .      
-                IQR (CV) : 0 (2.9)                                     
-  ------------------------------------------------------------------------------
+**Dimensions:** 11876 x 2\
+**Duplicates:** 6916
+
+  ---------------------------------------------------------------------------------
+  Variable      Stats / Values     Freqs (% of     Graph                  Missing
+                                   Valid)                                 
+  ------------- ------------------ --------------- ---------------------- ---------
+  adi\          Mean (sd) : 40.1   259 distinct        : .\               863\
+  \[numeric\]   (26.8)\            values          . : : :\               (7.3%)
+                min \< med \<                      : : : : :\             
+                max:\                              : : : : : : . . . :\   
+                1 \< 34 \< 100\                    : : : : : : : : : :    
+                IQR (CV) : 37                                             
+                (0.7)                                                     
+
+  coi\          Mean (sd) : 0 (0)\ 4844 distinct                 :\       1093\
+  \[numeric\]   min \< med \<      values                      . : .\     (9.2%)
+                max:\                                        . : : :\     
+                -0.1 \< 0 \< 0.1\                          : : : : :\     
+                IQR (CV) : 0 (2.9)                   . . : : : : : : .    
+  ---------------------------------------------------------------------------------
 
 ### KSADS
 
@@ -855,19 +862,21 @@ pander(
 tabcols$ksads<-c("ksads_factor")
 ```
 
-Data Frame Summary\
-tabfull\
-Dimensions: 11876 x 1\
-Duplicates: 11873
+### Data Frame Summary
 
-  ---------------------------------------------------------------------------
-  Variable     Stats / Values  Freqs (% of Valid)  Graph            Missing
-  ------------ --------------- ------------------- ---------------- ---------
-  tabfull      1\. 0 2. 1 3.   7723 (65.0%) 3004   IIIIIIIIIIIII    0 (0.0%)
-  \[factor\]   \>2             (25.3%) 1149 (      IIIII I          
-                               9.7%)                                
+#### tabfull
 
-  ---------------------------------------------------------------------------
+**Dimensions:** 11876 x 1\
+**Duplicates:** 11873
+
+  ----------------------------------------------------------------------------
+  Variable     Stats / Values  Freqs (% of Valid)  Graph             Missing
+  ------------ --------------- ------------------- ----------------- ---------
+  tabfull\     1\. 0\          7723 (65.0%)\       IIIIIIIIIIIII\    0\
+  \[factor\]   2. 1\           3004 (25.3%)\       IIIII\            (0.0%)
+               3. \>2          1149 ( 9.7%)        I                 
+
+  ----------------------------------------------------------------------------
 
 ### Income
 
@@ -918,38 +927,44 @@ pander(tabfull %>%
 tabcols$income<-c("household.income","household.income.full")
 ```
 
-Data Frame Summary\
-tabfull\
-Dimensions: 11876 x 2\
-Duplicates: 11865
+### Data Frame Summary
 
-  ---------------------------------------------------------------------------------
-  Variable                Stats / Values         Freqs (% of     Graph    Missing
-                                                 Valid)                   
-  ----------------------- ---------------------- --------------- -------- ---------
-  household.income        1\. \$0 to \$25k 2.    1635 (15.1%)    III II   1018
-  \[factor\]              \$25k to \$50k 3.      1588 (14.6%)    II II    (8.6%)
-                          \$50k to \$75k 4.      1499 (13.8%)    IIIIII   
-                          \$75k to \$100k 5.     1572 (14.5%)    II       
-                          \$100k to \$200k 6.    3314 (30.5%)             
-                          Over \$200k            1250 (11.5%)             
+#### tabfull
 
-  household.income.full   1\. \$100,000 through  3314 (30.5%)    IIIIII   1018
-  \[factor\]              \$199,999 2. \$12,000  273 ( 2.5%) 524          (8.6%)
-                          through \$15,999 3.    ( 4.8%) 1250             
-                          \$16,000 through       (11.5%) 654 (            
-                          \$24,999 4. \$200,000  6.0%) 934 (              
-                          and greater 5.         8.6%) 421 (              
-                          \$25,000 through       3.9%) 1499               
-                          \$34,999 6. \$35,000   (13.8%) 1572             
-                          through \$49,999 7.    (14.5%) 417 (            
-                          \$5,000 through        3.8%)                    
-                          \$11,999 8. \$50,000                            
-                          through \$74,999 9.                             
-                          \$75,000 through                                
-                          \$99,999 10. Less than                          
-                          \$5,000                                         
-  ---------------------------------------------------------------------------------
+**Dimensions:** 11876 x 2\
+**Duplicates:** 11865
+
+  ----------------------------------------------------------------------------------
+  Variable                 Stats / Values         Freqs (% of    Graph     Missing
+                                                  Valid)                   
+  ------------------------ ---------------------- -------------- --------- ---------
+  household.income\        1\. \$0 to \$25k\      1635 (15.1%)\  III\      1018\
+  \[factor\]               2. \$25k to \$50k\     1588 (14.6%)\  II\       (8.6%)
+                           3. \$50k to \$75k\     1499 (13.8%)\  II\       
+                           4. \$75k to \$100k\    1572 (14.5%)\  II\       
+                           5. \$100k to \$200k\   3314 (30.5%)\  IIIIII\   
+                           6. Over \$200k         1250 (11.5%)   II        
+
+  household.income.full\   1\. \$100,000 through  3314 (30.5%)\  IIIIII\   1018\
+  \[factor\]               \$199,999\             273 ( 2.5%)\   \         (8.6%)
+                           2. \$12,000 through    524 ( 4.8%)\   \         
+                           \$15,999\              1250 (11.5%)\  II\       
+                           3. \$16,000 through    654 ( 6.0%)\   I\        
+                           \$24,999\              934 ( 8.6%)\   I\        
+                           4. \$200,000 and       421 ( 3.9%)\   \         
+                           greater\               1499 (13.8%)\  II\       
+                           5. \$25,000 through    1572 (14.5%)\  II\       
+                           \$34,999\              417 ( 3.8%)              
+                           6. \$35,000 through                             
+                           \$49,999\                                       
+                           7. \$5,000 through                              
+                           \$11,999\                                       
+                           8. \$50,000 through                             
+                           \$74,999\                                       
+                           9. \$75,000 through                             
+                           \$99,999\                                       
+                           10. Less than \$5,000                           
+  ----------------------------------------------------------------------------------
 
 ### Parent Education
 
@@ -1063,33 +1078,36 @@ pander(tabfull %>%
 tabcols$ped<-c("p.edu","p.edu.full")
 ```
 
-Data Frame Summary\
-tabfull\
-Dimensions: 11876 x 2\
-Duplicates: 11856
+### Data Frame Summary
 
-  ----------------------------------------------------------------------------
-  Variable      Stats / Values        Freqs (% of    Graph           Missing
-                                      Valid)                         
-  ------------- --------------------- -------------- --------------- ---------
-  p.edu         1\. \< HS 2. HS       593 ( 5.0%)    I IIIII IIIII   14 (0.1%)
-  \[ordered,    Graduate 3. Some      1132 ( 9.5%)   IIIIII          
-  factor\]      College 4. College    3079 (26.0%)                   
-                Degree 5. Graduate    3015 (25.4%)                   
-                Degree                4043 (34.1%)                   
+#### tabfull
 
-  p.edu.full    1\. Never             0 ( 0.0%) 0 (                  14 (0.1%)
-  \[ordered,    attended/Kindergart   0.0%) 0 (                      
-  factor\]      2. 1st grade 3. 2nd   0.0%) 6 (                      
-                grade 4. 3rd grade 5. 0.1%) 6 (                      
-                4th grade 6. 5th      0.1%) 3 (                      
-                grade 7. 6th grade 8. 0.0%) 41 (                     
-                7th grade 9. 8th      0.3%) 16 (                     
-                grade 10. 9th grade   0.1%) 46 (                     
-                \[ 12 others \]       0.4%) 95 (                     
-                                      0.8%) 11649                    
-                                      (98.2%)                        
-  ----------------------------------------------------------------------------
+**Dimensions:** 11876 x 2\
+**Duplicates:** 11856
+
+  -----------------------------------------------------------------------------------
+  Variable      Stats / Values         Freqs (% of    Graph                 Missing
+                                       Valid)                               
+  ------------- ---------------------- -------------- --------------------- ---------
+  p.edu\        1\. \< HS\             593 ( 5.0%)\   \                     14\
+  \[ordered,    2. HS Graduate\        1132 ( 9.5%)\  I\                    (0.1%)
+  factor\]      3. Some College\       3079 (26.0%)\  IIIII\                
+                4. College Degree\     3015 (25.4%)\  IIIII\                
+                5. Graduate Degree     4043 (34.1%)   IIIIII                
+
+  p.edu.full\   1\. Never              0 ( 0.0%)\     \                     14\
+  \[ordered,    attended/Kindergart\   0 ( 0.0%)\     \                     (0.1%)
+  factor\]      2. 1st grade\          0 ( 0.0%)\     \                     
+                3. 2nd grade\          6 ( 0.1%)\     \                     
+                4. 3rd grade\          6 ( 0.1%)\     \                     
+                5. 4th grade\          3 ( 0.0%)\     \                     
+                6. 5th grade\          41 ( 0.3%)\    \                     
+                7. 6th grade\          16 ( 0.1%)\    \                     
+                8. 7th grade\          46 ( 0.4%)\    \                     
+                9. 8th grade\          95 ( 0.8%)\    \                     
+                10. 9th grade\         11649 (98.2%)  IIIIIIIIIIIIIIIIIII   
+                \[ 12 others \]                                             
+  -----------------------------------------------------------------------------------
 
 ### Race/Ethnicity
 
@@ -1344,18 +1362,21 @@ pander(tabfull %>%
 tabcols$re<-c("race_ethnicity.factor")
 ```
 
-Data Frame Summary\
-tabfull\
-Dimensions: 11876 x 1\
-Duplicates: 11870
+### Data Frame Summary
+
+#### tabfull
+
+**Dimensions:** 11876 x 1\
+**Duplicates:** 11870
 
   ---------------------------------------------------------------------------
-  Variable     Stats / Values   Freqs (% of Valid)   Graph          Missing
-  ------------ ---------------- -------------------- -------------- ---------
-  tabfull      1\. White 2.     6180 (52.0%) 1784    IIIIIIIIII III 2 (0.0%)
-  \[factor\]   Black 3.         (15.0%) 2411 (20.3%) IIII           
-               Hispanic 4.      252 ( 2.1%) 1247                    
-               Asian 5. Other   (10.5%)                             
+  Variable     Stats / Values   Freqs (% of Valid)  Graph           Missing
+  ------------ ---------------- ------------------- --------------- ---------
+  tabfull\     1\. White\       6180 (52.0%)\       IIIIIIIIII\     2\
+  \[factor\]   2. Black\        1784 (15.0%)\       III\            (0.0%)
+               3. Hispanic\     2411 (20.3%)\       IIII\           
+               4. Asian\        252 ( 2.1%)\        \               
+               5. Other         1247 (10.5%)        II              
 
   ---------------------------------------------------------------------------
 
@@ -1368,20 +1389,20 @@ tabcols$weights<-c("acs_raked_propensity")
 dfSummary(tabfull[,tabcols$weights])
 ```
 
-    ## Data Frame Summary  
-    ## tabfull  
-    ## Dimensions: 11876 x 1  
-    ## Duplicates: 8477  
+    ## ### Data Frame Summary  
+    ## #### tabfull  
+    ## **Dimensions:** 11876 x 1  
+    ## **Duplicates:** 8477  
     ## 
-    ## --------------------------------------------------------------------------------------------
-    ## Variable    Stats / Values            Freqs (% of Valid)     Graph                 Missing  
-    ## ----------- ------------------------- ---------------------- --------------------- ---------
-    ## tabfull     Mean (sd) : 691.3 (351)   3399 distinct values       :                 0        
-    ## [numeric]   min < med < max:                                   . : :               (0.0%)   
-    ##             161.4 < 619.3 < 1778.9                           . : : :                        
-    ##             IQR (CV) : 372.4 (0.5)                           : : : : .                      
-    ##                                                              : : : : : : : . . .            
-    ## --------------------------------------------------------------------------------------------
+    ## ---------------------------------------------------------------------------------------------
+    ## Variable    Stats / Values             Freqs (% of Valid)     Graph                 Missing  
+    ## ----------- -------------------------- ---------------------- --------------------- ---------
+    ## tabfull\    Mean (sd) : 691.3 (351)\   3399 distinct values   \ \ \ \ :\            0\       
+    ## [numeric]   min < med < max:\                                 \ \ . : :\            (0.0%)   
+    ##             161.4 < 619.3 < 1778.9\                           . : : :\                       
+    ##             IQR (CV) : 372.4 (0.5)                            : : : : .\                     
+    ##                                                               : : : : : : : . . .            
+    ## ---------------------------------------------------------------------------------------------
 
 ### Pubertal Development
 
@@ -1454,19 +1475,21 @@ any(!is.na(subtables$pcombine$pds_y_ss_female_category) & !is.na(subtables$pcomb
 
     ## [1] FALSE
 
-Data Frame Summary\
-tabfull\
-Dimensions: 11876 x 1\
-Duplicates: 11870
+### Data Frame Summary
+
+#### tabfull
+
+**Dimensions:** 11876 x 1\
+**Duplicates:** 11870
 
   ---------------------------------------------------------------------------
-  Variable     Stats / Values    Freqs (% of Valid)  Graph          Missing
-  ------------ ----------------- ------------------- -------------- ---------
-  tabfull      1\. pre-pubertal  5938 (50.5%) 2815   IIIIIIIIII     125
-  \[factor\]   2. early puberty  (24.0%) 2798        IIII IIII      (1.1%)
-               3. mid puberty 4. (23.8%) 188 ( 1.6%)                
-               late puberty 5.   12 ( 0.1%)                         
-               post pubertal                                        
+  Variable     Stats / Values     Freqs (% of Valid) Graph          Missing
+  ------------ ------------------ ------------------ -------------- ---------
+  tabfull\     1\. pre-pubertal\  5938 (50.5%)\      IIIIIIIIII\    125\
+  \[factor\]   2. early puberty\  2815 (24.0%)\      IIII\          (1.1%)
+               3. mid puberty\    2798 (23.8%)\      IIII\          
+               4. late puberty\   188 ( 1.6%)\       \              
+               5. post pubertal   12 ( 0.1%)                        
 
   ---------------------------------------------------------------------------
 
@@ -1513,39 +1536,49 @@ tabcols$cf <-
   )
 ```
 
-Data Frame Summary\
-tabfull\
-Dimensions: 11876 x 4\
-Duplicates: 2216
+### Data Frame Summary
 
-  ---------------------------------------------------------------------------------------
-  Variable                        Stats / Values    Freqs (% of    Graph        Missing
-                                                    Valid)                      
-  ------------------------------- ----------------- -------------- ------------ ---------
-  nihtbx_flanker_agecorrected     Mean (sd) : 95.4  43 distinct    . : : : : :  153
-  \[numeric\]                     (13.7) min \< med values         : : : : : :  (1.3%)
-                                  \< max: 62 \< 97                 : : : . : :  
-                                  \< 171 IQR (CV) :                : : . .      
-                                  19 (0.1)                                      
+#### tabfull
 
-  nihtbx_cryst_agecorrected       Mean (sd) : 105.5 119 distinct   : : : : : :  338
-  \[numeric\]                     (18.3) min \< med values         : : : : : :  (2.8%)
-                                  \< max: 33 \< 103                : : : .      
-                                  \< 197 IQR (CV) :                             
-                                  26 (0.2)                                      
+**Dimensions:** 11876 x 4\
+**Duplicates:** 2216
 
-  nihtbx_totalcomp_agecorrected   Mean (sd) : 100.4 163 distinct   : : : : : :  397
-  \[numeric\]                     (18) min \< med   values         : : . : : :  (3.3%)
-                                  \< max: 32 \< 100                :            
-                                  \< 221 IQR (CV) :                             
-                                  24 (0.2)                                      
+  -----------------------------------------------------------------------------------------
+  Variable                         Stats / Values    Freqs (% of   Graph          Missing
+                                                     Valid)                       
+  -------------------------------- ----------------- ------------- -------------- ---------
+  nihtbx_flanker_agecorrected\     Mean (sd) : 95.4  43 distinct     . : :\       153\
+  \[numeric\]                      (13.7)\           values          : : : :\     (1.3%)
+                                   min \< med \<                     : : : :\     
+                                   max:\                             : : : :\     
+                                   62 \< 97 \< 171\                . : : : : . .  
+                                   IQR (CV) : 19                                  
+                                   (0.1)                                          
 
-  pea_wiscv_tss \[numeric\]       Mean (sd) : 9.9   19 distinct    . : : : . .  249
-                                  (3) min \< med \< values         : : : : : :  (2.1%)
-                                  max: 1 \< 10 \<                  : : : . . :  
-                                  19 IQR (CV) : 4                  : : : : : .  
-                                  (0.3)                                         
-  ---------------------------------------------------------------------------------------
+  nihtbx_cryst_agecorrected\       Mean (sd) : 105.5 119 distinct        : :\     338\
+  \[numeric\]                      (18.3)\           values              : :\     (2.8%)
+                                   min \< med \<                         : : :\   
+                                   max:\                                 : : :\   
+                                   33 \< 103 \< 197\                   : : : : :  
+                                   IQR (CV) : 26                   .              
+                                   (0.2)                                          
+
+  nihtbx_totalcomp_agecorrected\   Mean (sd) : 100.4 163 distinct        :\       397\
+  \[numeric\]                      (18)\             values              :\       (3.3%)
+                                   min \< med \<                       : : :\     
+                                   max:\                               : : :\     
+                                   32 \< 100 \< 221\                 . : : : :    
+                                   IQR (CV) : 24                                  
+                                   (0.2)                                          
+
+  pea_wiscv_tss\                   Mean (sd) : 9.9   19 distinct         . :\     249\
+  \[numeric\]                      (3)\              values              : : . .\ (2.1%)
+                                   min \< med \<                         : : : :\ 
+                                   max:\                               : : : : :  
+                                   1 \< 10 \< 19\                  .\             
+                                   IQR (CV) : 4                      . : : : : :  
+                                   (0.3)                           : .            
+  -----------------------------------------------------------------------------------------
 
 ### Site
 
@@ -1555,22 +1588,27 @@ site_id_l
 tabcols$site <- c("site_id_l")
 ```
 
-Data Frame Summary\
-tabfull\
-Dimensions: 11876 x 1\
-Duplicates: 11854
+### Data Frame Summary
+
+#### tabfull
+
+**Dimensions:** 11876 x 1\
+**Duplicates:** 11854
 
   --------------------------------------------------------------------------
   Variable     Stats / Values   Freqs (% of Valid)   Graph         Missing
   ------------ ---------------- -------------------- ------------- ---------
-  tabfull      1\. site15 2.    459 ( 3.9%) 1010 (   I             0 (0.0%)
-  \[factor\]   site16 3. site02 8.5%) 559 ( 4.7%)                  
-               4. site09 5.     432 ( 3.6%) 339 (                  
-               site07 6. site22 2.9%) 32 ( 0.3%) 384               
-               7. site18 8.     ( 3.2%) 601 ( 5.1%)                
-               site21 9. site03 631 ( 5.3%) 550 (                  
-               10. site19 \[ 12 4.6%) 6879 (57.9%)                 
-               others \]                                           
+  tabfull\     1\. site15\      459 ( 3.9%)\         \             0\
+  \[factor\]   2. site16\       1010 ( 8.5%)\        I\            (0.0%)
+               3. site02\       559 ( 4.7%)\         \             
+               4. site09\       432 ( 3.6%)\         \             
+               5. site07\       339 ( 2.9%)\         \             
+               6. site22\       32 ( 0.3%)\          \             
+               7. site18\       384 ( 3.2%)\         \             
+               8. site21\       601 ( 5.1%)\         I\            
+               9. site03\       631 ( 5.3%)\         I\            
+               10. site19\      550 ( 4.6%)\         \             
+               \[ 12 others \]  6879 (57.9%)         IIIIIIIIIII   
 
   --------------------------------------------------------------------------
 
@@ -1866,24 +1904,26 @@ pander(tabfull %>% count(ABCD_rsfmri_QC2))
 tabcols$imgincl <- c("imgincl_t1w_include","imgincl_rsfmri_include","ABCD_rsfmri_QC2")
 ```
 
-Data Frame Summary\
-tabfull\
-Dimensions: 11876 x 3\
-Duplicates: 11873
+### Data Frame Summary
 
-  -------------------------------------------------------------------------------------
-  Variable                 Stats /      Freqs (% of     Graph                 Missing
-                           Values       Valid)                                
-  ------------------------ ------------ --------------- --------------------- ---------
-  imgincl_t1w_include      1\. FALSE 2. 474 ( 4.0%)     IIIIIIIIIIIIIIIIIII   0 (0.0%)
-  \[logical\]              TRUE         11402 (96.0%)                         
+#### tabfull
 
-  imgincl_rsfmri_include   1\. FALSE 2. 2249 (18.9%)    III IIIIIIIIIIIIIIII  0 (0.0%)
-  \[logical\]              TRUE         9627 (81.1%)                          
+**Dimensions:** 11876 x 3\
+**Duplicates:** 11873
 
-  ABCD_rsfmri_QC2          1\. FALSE 2. 2249 (18.9%)    III IIIIIIIIIIIIIIII  0 (0.0%)
-  \[logical\]              TRUE         9627 (81.1%)                          
-  -------------------------------------------------------------------------------------
+  --------------------------------------------------------------------------------------
+  Variable                  Stats /      Freqs (% of     Graph                 Missing
+                            Values       Valid)                                
+  ------------------------- ------------ --------------- --------------------- ---------
+  imgincl_t1w_include\      1\. FALSE\   474 ( 4.0%)\    \                     0\
+  \[logical\]               2. TRUE      11402 (96.0%)   IIIIIIIIIIIIIIIIIII   (0.0%)
+
+  imgincl_rsfmri_include\   1\. FALSE\   2249 (18.9%)\   III\                  0\
+  \[logical\]               2. TRUE      9627 (81.1%)    IIIIIIIIIIIIIIII      (0.0%)
+
+  ABCD_rsfmri_QC2\          1\. FALSE\   2249 (18.9%)\   III\                  0\
+  \[logical\]               2. TRUE      9627 (81.1%)    IIIIIIIIIIIIIIII      (0.0%)
+  --------------------------------------------------------------------------------------
 
 ### BMI
 
@@ -1893,32 +1933,32 @@ tabcols$bmi<-c("bmi","anthroweightcalc","anthroheightcalc")
 dfSummary(tabfull[,tabcols$bmi])
 ```
 
-    ## Data Frame Summary  
-    ## tabfull  
-    ## Dimensions: 11876 x 3  
-    ## Duplicates: 4123  
+    ## ### Data Frame Summary  
+    ## #### tabfull  
+    ## **Dimensions:** 11876 x 3  
+    ## **Duplicates:** 4123  
     ## 
-    ## -----------------------------------------------------------------------------------------------
-    ## Variable           Stats / Values            Freqs (% of Valid)     Graph             Missing  
-    ## ------------------ ------------------------- ---------------------- ----------------- ---------
-    ## bmi                Mean (sd) : 19.3 (36.6)   7714 distinct values   :                 12       
-    ## [numeric]          min < med < max:                                 :                 (0.1%)   
-    ##                    2.1 < 17.7 < 3017                                :                          
-    ##                    IQR (CV) : 4.7 (1.9)                             :                          
-    ##                                                                     :                          
+    ## --------------------------------------------------------------------------------------------------------------
+    ## Variable            Stats / Values             Freqs (% of Valid)     Graph                          Missing  
+    ## ------------------- -------------------------- ---------------------- ------------------------------ ---------
+    ## bmi\                Mean (sd) : 19.3 (36.6)\   7714 distinct values   :\                             12\      
+    ## [numeric]           min < med < max:\                                 :\                             (0.1%)   
+    ##                     2.1 < 17.7 < 3017\                                :\                                      
+    ##                     IQR (CV) : 4.7 (1.9)                              :\                                      
+    ##                                                                       :                                       
     ## 
-    ## anthroweightcalc   Mean (sd) : 82.6 (23.8)   1833 distinct values       :             11       
-    ## [numeric]          min < med < max:                                     :             (0.1%)   
-    ##                    0 < 76.5 < 272                                       : .                    
-    ##                    IQR (CV) : 27 (0.3)                                  : :                    
-    ##                                                                       . : : :                  
+    ## anthroweightcalc\   Mean (sd) : 82.6 (23.8)\   1833 distinct values   \ \ \ \ :\                     11\      
+    ## [numeric]           min < med < max:\                                 \ \ \ \ :\                     (0.1%)   
+    ##                     0 < 76.5 < 272\                                   \ \ \ \ : .\                            
+    ##                     IQR (CV) : 27 (0.3)                               \ \ \ \ : :\                            
+    ##                                                                       \ \ . : : :                             
     ## 
-    ## anthroheightcalc   Mean (sd) : 55.2 (3.3)    789 distinct values                :     9        
-    ## [numeric]          min < med < max:                                             :     (0.1%)   
-    ##                    0 < 55.1 < 82                                                :              
-    ##                    IQR (CV) : 4.2 (0.1)                                         : .            
-    ##                                                                                 : :            
-    ## -----------------------------------------------------------------------------------------------
+    ## anthroheightcalc\   Mean (sd) : 55.2 (3.3)\    789 distinct values    \ \ \ \ \ \ \ \ \ \ \ \ :\     9\       
+    ## [numeric]           min < med < max:\                                 \ \ \ \ \ \ \ \ \ \ \ \ :\     (0.1%)   
+    ##                     0 < 55.1 < 82\                                    \ \ \ \ \ \ \ \ \ \ \ \ :\              
+    ##                     IQR (CV) : 4.2 (0.1)                              \ \ \ \ \ \ \ \ \ \ \ \ : .\            
+    ##                                                                       \ \ \ \ \ \ \ \ \ \ \ \ : :             
+    ## --------------------------------------------------------------------------------------------------------------
 
 ### Scanner
 
@@ -1928,24 +1968,24 @@ tabcols$scanner<-c("mri_manu","mri_model")
 dfSummary(tabfull[,tabcols$scanner])
 ```
 
-    ## Data Frame Summary  
-    ## tabfull  
-    ## Dimensions: 11876 x 2  
-    ## Duplicates: 11870  
+    ## ### Data Frame Summary  
+    ## #### tabfull  
+    ## **Dimensions:** 11876 x 2  
+    ## **Duplicates:** 11870  
     ## 
-    ## --------------------------------------------------------------------------------------
-    ## Variable    Stats / Values               Freqs (% of Valid)   Graph          Missing  
-    ## ----------- ---------------------------- -------------------- -------------- ---------
-    ## mri_manu    1. GE MEDICAL SYSTEMS        2977 (25.2%)         IIIII          75       
-    ## [factor]    2. Philips Medical Systems   1521 (12.9%)         II             (0.6%)   
-    ##             3. SIEMENS                   7303 (61.9%)         IIIIIIIIIIII            
+    ## -----------------------------------------------------------------------------------------
+    ## Variable     Stats / Values                 Freqs (% of Valid)   Graph          Missing  
+    ## ------------ ------------------------------ -------------------- -------------- ---------
+    ## mri_manu\    1\. GE MEDICAL SYSTEMS\        2977 (25.2%)\        IIIII \        75\      
+    ## [factor]     2\. Philips Medical Systems\   1521 (12.9%)\        II \           (0.6%)   
+    ##              3\. SIEMENS                    7303 (61.9%)         IIIIIIIIIIII            
     ## 
-    ## mri_model   1. Achieva dStream            979 ( 8.3%)         I              75       
-    ## [factor]    2. DISCOVERY MR750           2977 (25.2%)         IIIII          (0.6%)   
-    ##             3. Ingenia                    542 ( 4.6%)                                 
-    ##             4. Prisma                    3088 (26.2%)         IIIII                   
-    ##             5. Prisma_fit                4215 (35.7%)         IIIIIII                 
-    ## --------------------------------------------------------------------------------------
+    ## mri_model\   1\. Achieva dStream\           979 ( 8.3%)\         I \            75\      
+    ## [factor]     2\. DISCOVERY MR750\           2977 (25.2%)\        IIIII \        (0.6%)   
+    ##              3\. Ingenia\                   542 ( 4.6%)\         \                       
+    ##              4\. Prisma\                    3088 (26.2%)\        IIIII \                 
+    ##              5\. Prisma_fit                 4215 (35.7%)         IIIIIII                 
+    ## -----------------------------------------------------------------------------------------
 
 ## Filter Tabulated Data
 
