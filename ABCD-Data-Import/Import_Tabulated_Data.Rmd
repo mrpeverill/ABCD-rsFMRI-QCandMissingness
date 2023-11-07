@@ -1,8 +1,12 @@
 ---
-output:
-  md_document:
-    variant: markdown
+output: html_document
 ---
+
+<!-- --- -->
+<!-- output:  -->
+<!--   md_document: -->
+<!--     variant: markdown -->
+<!-- --- -->
 
 
 ```{r setup, include=FALSE}
@@ -15,7 +19,7 @@ library(summarytools)
 library(pander)
 set.seed(700574)
 
-st_options(plain.ascii       = TRUE, #leave on for development
+st_options(plain.ascii       = FALSE, #leave on for development
            style             = "grid",
            dfSummary.silent  = TRUE,
            footnote          = NA,
