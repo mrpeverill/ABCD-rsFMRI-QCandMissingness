@@ -1,6 +1,4 @@
 
 Code to concatenate behavioral data for my ABCD projects.
 
-'Tables_Needed.txt' contains a text list of needed data structures. 'Measures_Needed.xlsx' contains data structure notes and comments.
-
-'make TabulatedData' will extract the tables from a zip file, which is defined in 'Makefile'
+The rendered Rmd can be viewed at (https://htmlpreview.github.io/?https://github.com/mrpeverill/ABCD-rsFMRI-QCandMissingness/blob/main/ABCD-Data-Import/Import_Tabulated_Data.html)
