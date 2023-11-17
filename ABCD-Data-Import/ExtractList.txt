@@ -1,0 +1,14 @@
+abcd_rhds01.txt
+abcd_ptsd01.txt
+pdem02.txt
+acspsw03.txt
+abcd_ssphy01.txt
+abcd_ssphp01.txt
+abcd_cbcls01.txt
+abcd_ps01.txt
+abcd_tbss01.txt
+abcd_lt01.txt
+mriqcrp10301.txt
+abcd_imgincl01.txt
+abcd_ant01.txt
+abcd_mri01.txt

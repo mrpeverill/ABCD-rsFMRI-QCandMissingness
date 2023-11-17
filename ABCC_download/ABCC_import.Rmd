@@ -1,0 +1,133 @@
+---
+title: "Appendix B"
+author: "Matthew Peverill"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse); library(ggthemes); theme_set(theme_tufte())
+library(pander)
+library(hexbin)
+```
+
+From the ABCC, we need to import:
+
+* Subject ID
+* the average FD per functional scan.
+* Do they have 5 minutes of usable data at each of the 5 included thresholds in the .mat file?
+* The connectivity matrix for each threshold (or data to construct a plot with)
+* A matrix of the distance between each pair of ROIs (in the template is fine).
+
+# Index image files and extract mean FD
+
+```{python, child='get_image_FD.py',eval=FALSE}
+```
+
+# Calculate the distance between Glasser Parcellation regions
+
+These data were provided by Neurostars
+
+# Sum total uncensored frames per threshold, per subject.
+
+These are calculated per subject in a split by split basis. This code also incorporates the FD statistics, above.
+
+```{r, child="process-split/processsplit.R",eval=FALSE}
+```
+
+## Merge:
+
+```{r}
+datapath=path.expand("./process-split/data/")
+subjectRDSlist<-list.files(datapath,"abccsplit....subjectdata.RDS",full.names=TRUE,recursive=TRUE)
+subjectdata <- lapply(subjectRDSlist, readRDS)
+subjectdata <- Reduce(rbind,subjectdata)
+saveRDS(subjectdata,"ABCCsubjectdata.RDS")
+rm(subjectdata)
+```
+
+# Distance x correlation plots.
+
+These are calculated by split by the following script:
+
+```{r, child="process-split/processsplit2.R",eval=FALSE}
+```
+
+The resulting RDS objects for each split contain a list of five hexbin objects. These will need to be stacked.
+
+```{r hexbinfunctions}
+###############
+## Functions ##
+###############
+
+# Hexbin concatenation
+# Get elements from s4 object by name
+get_slots <- function(x,nm) Map(\(c) getElement(x, c), nm)
+
+# Unpack hexbin data to be merged in to a dataframe
+# Strictly speaking we don't need the xy coordinates, but it is a good error
+# check if we have the computation time available.
+unpack_hexbin <- function(x) {
+  cols <- c("cell", "count", "xcm", "ycm")
+  return(cbind(data.frame(get_slots(x,cols)),
+               hcell2xy(x)))
+}
+
+# Get columns from a dataframe that should not vary between hexbins to be
+# merged.
+getmeta_hexbin <- function(x) {
+  varying=c("cell", "count", "xcm", "ycm", "call", "n", "ncells")
+  other_slots <- setdiff(slotNames(x), varying)
+  get_slots(x,other_slots)
+}
+
+# Center of mass calculation for two points, robust to missing data.
+cm<-function(x1,x2,x1w,x2w) {
+  i<-x1*x1w
+  j<-x2*x2w
+  w<-sum(x1w,x2w,na.rm=TRUE)
+  return(sum(i,j,na.rm=TRUE)/w)
+}
+
+combine_hexbin <- function(a,b) {
+  hm <- merge(unpack_hexbin(a),
+              unpack_hexbin(b),
+              by = c("cell","x","y"),
+              all = TRUE)
+  if(any(duplicated(hm$cell))) stop("Duplicate cell Id's detected: Do the hexbin objects have the same grid?")
+  hm2 <- hm %>% rowwise() %>% mutate(
+    count=sum(count.x,count.y,na.rm=TRUE),
+    xcm=cm(xcm.x,xcm.y,count.x,count.y),
+    ycm=cm(ycm.x,ycm.y,count.x,count.y)
+  )
+  do.call(new,
+          c(list("hexbin"),
+            as.list(hm2[,c("cell",
+                           "count",
+                           "xcm",
+                           "ycm")]),
+            list(n = sum(hm2$count),
+                 ncells = length(hm2)),
+            getmeta_hexbin(a),
+            call = quote(call("merged hexbin", 1))
+          ))
+}
+
+# Shortcut for matrix reading
+matrix_read<-function(x) {as.matrix(read.csv(x,header=FALSE))[1:360,1:360]}
+```
+
+```{r}
+hexbinRDSlist<-list.files(datapath,"abccsplit...hexlist.RDS",full.names=TRUE,recursive=TRUE)
+hexbindata <- lapply(hexbinRDSlist, readRDS)
+hexbins <- Reduce(\(x,y) list('0.1'=combine_hexbin(x[['0.1']],y[['0.1']]),
+                              '0.2'=combine_hexbin(x[['0.2']],y[['0.2']]),
+                              '0.3'=combine_hexbin(x[['0.3']],y[['0.3']]),
+                              '0.4'=combine_hexbin(x[['0.4']],y[['0.4']]),
+                              '0.5'=combine_hexbin(x[['0.5']],y[['0.5']]),
+                              'none'=combine_hexbin(x[['none']],y[['none']])),
+                  hexbindata)
+saveRDS(hexbins,file="hexbinlist.RDS")
+```
+
