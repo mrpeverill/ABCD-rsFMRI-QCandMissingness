@@ -76,7 +76,7 @@ df<-df %>%
   mutate(across(starts_with("gframe"),\(x) {x>375},.names = "{.col}_375")) %>% 
   mutate(across(ends_with("375"),~replace_na(.,FALSE)))
 
-imgincl<-readRDS("ABCC_download/dwnld_excluded_subjects/imginclusion.Rds")
+imgincl<-readRDS("ABCD-fastqc01/imginclusion.Rds")
 
 df<-left_join(df,imgincl[,1:2],by=join_by(subjectkeychar==subjectkey)) %>% 
   mutate(fastqcok=replace_na(fastqcok,FALSE))
