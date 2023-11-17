@@ -1,0 +1,17 @@
+universe = vanilla
+executable = process-split.sh
+arguments = $(subject)
+opath = /home/groups/abcd_data/ABCD-Missingness/ABCC_download/process-split/output
+log    = $(opath)/$(Cluster).$(Process)_download_$(subject).log
+output = $(opath)/$(Cluster).$(Process)_download_$(subject).out
+error  = $(opath)/$(Cluster).$(Process)_download_$(subject).err
+
+# List all of your .m files, or a tar.gz file if you've combined them.
+transfer_input_files = cifti-connectivity.tar.xz, MCR.tar.xz, http://proxy.chtc.wisc.edu/SQUID/chtc/el8/R413.tar.gz, http://proxy.chtc.wisc.edu/SQUID/chtc/el8/python310.tar.gz, glasserdistances.txt, glasser_networks.txt, workbench-rh_linux64-v1.5.0.zip,processsplit.R,rpackages.tar.xz,processsplit2.R,get_image_FD.py,pypackages.tar.xz,splits.tar.gz,process-split.sh
+
+request_cpus = 1
+request_memory = 8GB
+request_disk = 9GB
+Requirements = (Target.HasCHTCProjects == true)
+
+#queue

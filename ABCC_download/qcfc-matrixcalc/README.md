@@ -1,0 +1,1 @@
+This code uses HTcondor to generate one process per threshold listed in the thresholds file. It outputs a matrix of the correlation of each roi pair with participant framewise displacement, which is saved as a csv file, e.g. QCFCthresh0.1.csv .

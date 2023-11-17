@@ -1,12 +1,12 @@
 ---
-output: html_document
+title: "ABCD Tabulated Data Import and Coding"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 3
+    toc_float:
+      collapsed: true
 ---
-
-<!-- --- -->
-<!-- output:  -->
-<!--   md_document: -->
-<!--     variant: markdown -->
-<!-- --- -->
 
 
 ```{r setup, include=FALSE}
@@ -35,9 +35,8 @@ st_options(plain.ascii       = FALSE, #leave on for development
 st_css(main = TRUE, global = TRUE)
 ```
 
-# Appendix A: ABCD Tabulated Data Import
 
-We are extracting the following data structures:
+We are using the following tables:
 
 ```{r comment=''}
 cat(readLines('ExtractList.txt'), sep = '\n')

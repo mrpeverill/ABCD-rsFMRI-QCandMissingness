@@ -1,0 +1,110 @@
+---
+title: "FastQC01 processing"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(pander)
+```
+
+This document processes abcd_fastqc01.txt and outputs table indicating whether participants have adequate useable data according to that source. The file must be saved in this folder.
+
+# fastqc01
+
+This file describes qc data in the fast track images from which the ABCC was derived.
+
+```{r}
+tnames<-read_tsv("abcd_fastqc01.txt",col_names=FALSE,n_max=1)
+desc<-read_tsv("abcd_fastqc01.txt",col_names=FALSE,skip=1,n_max=1)
+fastqc<-read_tsv("abcd_fastqc01.txt",skip=2,col_names=FALSE)
+names(fastqc)<-t(tnames)
+cbind(t(tnames),t(desc))
+fastqc <- fastqc %>%
+  select(c(subjectkey,visit,ftq_recalled,ftq_series_id,ftq_usable,ftq_notes,file_source))
+```
+
+The fastqc file is parsed and a few relevant columns are selected:
+
+`r pander(head(fastqc))`
+
+Now we filter for baseline images and exclude recalled images (these have either been replaced or had consent withdrawn, and are not available).
+
+```{r}
+fastqc <- fastqc %>%
+  filter(visit=="baseline_year_1_arm_1" & ftq_recalled==0)
+```
+
+Parse filenames to see what images are present per subject:
+
+```{r}
+fastqc <- fastqc %>%
+  mutate(subjectkey=substr(ftq_series_id,0,15))
+pattern <- "(?<=ABCD-).*?(?=_2)"
+
+fastqc$imgtype<-stringr::str_extract(fastqc$ftq_series_id,pattern)
+
+fastqc<-fastqc %>% filter(imgtype=="T1" |
+                            imgtype=="T1-NORM" |
+                            imgtype=="T2" |
+                            imgtype=="T2-NORM" |
+                            imgtype=="rsfMRI" |
+                            imgtype=="fMRI-FM" |
+                            imgtype=="fMRI-FM-PA" |
+                            imgtype=="fMRI-FM-AP")
+
+fastqc$imgtype <- as.factor(fastqc$imgtype)
+
+dwndabledf<-fastqc %>%
+  group_by(subjectkey, imgtype) %>%
+  summarize(usecount=length(ftq_usable)) %>%
+  pivot_wider(id_cols=subjectkey,names_from=imgtype,values_from=usecount)
+dwndabledf <- dwndabledf %>% mutate(across(where(is.numeric),replace_na,0))
+```
+
+This yields, e.g.:
+
+`r pander(head(dwndabledf))`
+
+Participants with useable data will have a useable framemap, rs-fmri image, and T1. Here we construct a variable based on whether the user has enough images passing operator QC:
+
+```{r}
+useabledf<-fastqc %>%
+  filter(ftq_usable==1) %>% 
+  group_by(subjectkey, imgtype) %>%
+  summarize(usecount=length(ftq_usable)) %>%
+  pivot_wider(id_cols=subjectkey,names_from=imgtype,values_from=usecount)
+useabledf <- useabledf %>% mutate(across(where(is.numeric),replace_na,0))
+
+useabledf$T1ok<- (useabledf$T1 + useabledf$`T1-NORM`)>0
+
+#rsfmri needs to be present.
+
+useabledf$rsfmriok<-useabledf$rsfMRI>0
+
+#FM needs to be present, or the fm-ap and fm-pa are the same length and not equal to 0.
+
+useabledf$fmok<- (useabledf$`fMRI-FM`>0) | (useabledf$`fMRI-FM-AP` > 0 & (useabledf$`fMRI-FM-AP` == useabledf$`fMRI-FM-PA`))
+
+#We need all three
+
+useabledf <- useabledf %>% 
+  mutate(fastqcok = T1ok & rsfmriok & fmok) %>% 
+        mutate(across(ends_with("ok"),replace_na,FALSE))
+```
+
+# Inclusion Table
+
+Output a table of participant inclusion flags.
+
+```{r}
+inclusion <- useabledf %>% 
+  select(c(subjectkey,fastqcok,T1ok,rsfmriok,fmok)) %>% 
+  mutate(fastqcok=replace_na(fastqcok,FALSE))
+
+saveRDS(inclusion,file="imginclusion.Rds")
+```
+
+`r table(inclusion[,2:3])`
+
