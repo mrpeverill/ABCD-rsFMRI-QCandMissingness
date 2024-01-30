@@ -1,0 +1,830 @@
+---
+output:
+  word_document:
+    reference_docx: "PosterRmdTemplate.docx"
+    pandoc_args: [ "--csl", "apa.csl"]
+bibliography: ABCD.bib
+biblio-style: apalike
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,warning = FALSE,message = FALSE)
+library(tidyverse); library(ggthemes); theme_set(theme_tufte(base_size = 24,
+                                                             base_family = "Red hat display"))
+library(ggExtra)
+library(pander)
+library(hexbin)
+library(huxtable)
+library(viridis)
+library(patchwork)
+```
+
+```{r coding}
+recodesid <- function(x) {
+  paste0("NDAR",substr(x, start = 6, stop = nchar(x)))
+}
+
+t1<-readRDS("../ABCD-Data-Import/tabulateddata.Rds")
+t2<-readRDS("../ABCC_download/ABCCsubjectdata.RDS")
+df<-left_join(readRDS("../RDS/tabulateddata.Rds") %>% 
+                mutate(subjectkey=recodesid(as.character(subjectkey))),
+              readRDS("../ABCC_download/ABCCsubjectdata.RDS"),
+              by=c("subjectkey"="sname"))
+  
+df<-df %>% 
+  mutate(subjectkeychar=subjectkey,
+         subjectkey=as.factor(subjectkey)) %>%  
+  # Pt's without ABCC data should have FALSE for the 'Scan Exists' booleans
+  mutate(across(starts_with("Exists"),
+                ~ case_when(. == "True" ~ TRUE,
+                            . == "False" ~ FALSE,
+                            is.na(.) ~ FALSE))) %>%
+  # Pt's without ABCC data should have TRUE for > 5 minute data booleans.
+  mutate(across(starts_with("ltfive"),
+                ~ replace_na(.,TRUE))) %>% 
+  #Standardize psychopathology scores
+  mutate(across(pfactor:EXT,scale)) %>% 
+  # Are there any rsfmri images in ABCC?
+  mutate(any_rest = (Exists_rest_1 |
+                     Exists_rest_2 |
+                     Exists_rest_3 |
+                     Exists_rest_4)) %>% 
+  #Are there >375 low motion frames per threshold 
+  mutate(across(starts_with("gframe"),\(x) {x>375},.names = "{.col}_375")) %>% 
+  mutate(across(ends_with("375"),~replace_na(.,FALSE)))
+
+imgincl<-readRDS("../ABCC_download/dwnld_excluded_subjects/imginclusion.Rds")
+
+df<-left_join(df,imgincl[,1:2],by=join_by(subjectkeychar==subjectkey)) %>% 
+  mutate(fastqcok=replace_na(fastqcok,FALSE))
+
+# N.B. A few (8) Pt's have neuroimaging data but not tabular data.
+# Possibly they have removed consent? They are not included in this
+# analysis
+
+```
+
+```{r bmi}
+#Get bmi
+df$bmiAgeZ <- 
+  zscorer::addWGSR(
+    data = df %>% mutate(
+      sex=case_match(sex, "M" ~ 1,"F" ~ 2),
+      weight=anthroweightcalc/2.20462,
+      height=anthroheightcalc*2.54,
+      age=interview_age*30.437),
+    sex = "sex",
+    firstPart = "weight",
+    secondPart = "height",
+    thirdPart = "age",
+    index = "bfa",
+    output = "bmiAgeZ",
+    digits = 4
+  )$bmiAgeZ
+
+
+df[df$bmi > 80 & !is.na(df$bmi),"bmi"] <- NA
+
+df[df$bmiAgeZ > 10 & !is.na(df$bmiAgeZ),"bmiAgeZ"] <- NA
+```
+
+\newpage
+
+# Objective
+
+Excluding participants due to image quality is a standard practice in resting state MRI analysis [@power_methods_2014]. We describe the impact of exclusions on the characteristics of the ABCD sample at several levels of exclusion and motion thresholding.
+
+\newpage
+
+# Methods
+
+We utilized data from the ABCD Community Collection [@feczko_adolescent_2021], with supplemental QC flags from ABCD release 4.0. Participants were flagged under the following QC conditions:
+
+```{r levelstable}
+#A bar/forest type plot would also look good here.
+
+levelsdf<-data.frame(
+  Level = c(
+    "Full (F)",
+    "ABCD 4 Tabulated (T)",
+    "ABCC (C)",
+    "ABCC < .5mm",
+    "ABCC < .4mm",
+    "ABCC < .3mm",
+    "ABCD 4 Recommended (R)",
+    "ABCD < .2mm",
+    "ABCD < .1mm"
+  ),
+  Description = c(
+    "Entire sample",
+    "rsFMRI tabulated data available (at least 1 T1 and 1 rsFMRI were complete and passed visual inspection)",
+    "Included in the ABCD Community Collection",
+    "ABCC + censoring at threshold*",
+    "\"",
+    "\"",
+    "T1 and rsFMRI recommended in 'ABCD Recommended Imaging Inclusion' table (includes 375 frames at <.2mm FD)",
+    "ABCC + censoring at .2mm threshold",
+    "\""
+  ),
+  Count = c(
+    nrow(df),
+    sum(df$ABCD_rsfmri_QC1),
+    sum(df$any_rest),
+    sum(df$gframes_0.5_375),
+    sum(df$gframes_0.4_375),
+    sum(df$gframes_0.3_375),
+    sum(df$ABCD_rsfmri_QC2),
+    sum(df$gframes_0.2_375),
+    sum(df$gframes_0.1_375)
+  )
+)
+
+as_hux(levelsdf[,1:2]) %>% 
+  theme_basic() %>% 
+  set_font_size(24) %>% 
+  set_width(1.8) %>% 
+  set_col_width(c(.25,.5,.25)) %>% 
+  set_background_color(NA)
+  
+```
+
+*In ABCC, Framewise displacement for each scan was filtered for respiratory artifact [@fair_correction_2020]. Frames with filtered FD above threshold, as well as series with less than five contiguous frames between filtered frames, were considered unusable. Participants with <375 usable frames were excluded. 
+
+Importantly, inclusion recommendations in Tabulated and Community collection were substantially non-overlapping (see upset plot, right). These discrepancies likely stem from changes in ABCD over time (i.e. coding changes and re-acquired scans).
+
+We ran a logistic regression model for each exclusion variable where behavioral and demographic variables predicted the adjusted odds of exclusion. Significant coefficients are starred in figures; adjusted odds ratios are presented in right panel table.
+
+\newpage
+
+# Adjusted Odds Ratios
+
+```{r}
+cvars <- c(
+    "adi",
+    "coi",
+    "nihtbx_flanker_agecorrected",
+    "nihtbx_cryst_agecorrected",
+    "nihtbx_totalcomp_agecorrected",
+    "pea_wiscv_tss",
+    "pfactor",
+    "INT",
+    "EXT",
+    "interview_age",
+    "bmi"
+  )
+
+# Z scores
+df <- df %>% mutate(across(ends_with(cvars),scale,.names = "{.col}.z"))
+
+# Relevel factors to modal levels
+
+df$p.edu<-relevel(factor(df$p.edu,ordered=FALSE),4)
+df$household.income<-relevel(df$household.income,5)
+
+# bools<-c("full", 
+#         "ABCD_rsfmri_QC1",
+#         "any_rest",
+#         "gframes_0.5_375",
+#         "gframes_0.4_375",
+#         "gframes_0.3_375",
+#         "gframes_0.2_375",
+#         "ABCD_rsfmri_QC2",
+#         "gframes_0.1_375")
+
+set.seed(1)
+
+model.QC1<-glm(!ABCD_rsfmri_QC1 ~ sex + household.income + p.edu + race_ethnicity.factor + ksads_factor + pds_category + adi.z + coi.z + nihtbx_flanker_agecorrected.z + nihtbx_cryst_agecorrected.z + nihtbx_totalcomp_agecorrected.z + pea_wiscv_tss.z + pfactor.z + INT.z + EXT.z + interview_age.z + bmiAgeZ,data=df,family="binomial")
+model.QC1.results<-cbind(confint(model.QC1,level=.90),model.QC1$coefficients)[,c(1,3,2)]
+#model.QC1.results<-cbind(model.QC1.results,coef(summary(model.QC1))[,4])
+model.QC1.results<-cbind(model.QC1.results,p.adjust(coef(summary(model.QC1))[,4],method="fdr"))
+
+model.ABCC<-glm(!any_rest ~ sex + household.income + p.edu + race_ethnicity.factor + ksads_factor + pds_category + adi.z + coi.z + nihtbx_flanker_agecorrected.z + nihtbx_cryst_agecorrected.z + nihtbx_totalcomp_agecorrected.z + pea_wiscv_tss.z + pfactor.z + INT.z + EXT.z + interview_age.z + bmiAgeZ,data=df,family="binomial")
+model.ABCC.results<-cbind(confint(model.ABCC,level=.90),model.ABCC$coefficients)[,c(1,3,2)]
+model.ABCC.results<-cbind(model.ABCC.results,p.adjust(coef(summary(model.ABCC))[,4],method="fdr"))
+
+model.5mm<-glm(!gframes_0.5_375 ~ sex + household.income + p.edu + race_ethnicity.factor + ksads_factor + pds_category + adi.z + coi.z + nihtbx_flanker_agecorrected.z + nihtbx_cryst_agecorrected.z + nihtbx_totalcomp_agecorrected.z + pea_wiscv_tss.z + pfactor.z + INT.z + EXT.z + interview_age.z + bmiAgeZ,data=df,family="binomial")
+model.5mm.results<-cbind(confint(model.5mm,level=.90),model.5mm$coefficients)[,c(1,3,2)]
+#model.5mm.results<-cbind(model.5mm.results,coef(summary(model.5mm))[,4])
+model.5mm.results<-cbind(model.5mm.results,p.adjust(coef(summary(model.5mm))[,4],method="fdr"))
+
+
+model.4mm<-glm(!gframes_0.4_375 ~ sex + household.income + p.edu + race_ethnicity.factor + ksads_factor + pds_category + adi.z + coi.z + nihtbx_flanker_agecorrected.z + nihtbx_cryst_agecorrected.z + nihtbx_totalcomp_agecorrected.z + pea_wiscv_tss.z + pfactor.z + INT.z + EXT.z + interview_age.z + bmiAgeZ,data=df,family="binomial")
+model.4mm.results<-cbind(confint(model.4mm,level=.90),model.4mm$coefficients)[,c(1,3,2)]
+model.4mm.results<-cbind(model.4mm.results,p.adjust(coef(summary(model.4mm))[,4],method="fdr"))
+
+model.3mm<-glm(!gframes_0.3_375 ~ sex + household.income + p.edu + race_ethnicity.factor + ksads_factor + pds_category + adi.z + coi.z + nihtbx_flanker_agecorrected.z + nihtbx_cryst_agecorrected.z + nihtbx_totalcomp_agecorrected.z + pea_wiscv_tss.z + pfactor.z + INT.z + EXT.z + interview_age.z + bmiAgeZ,data=df,family="binomial")
+model.3mm.results<-cbind(confint(model.3mm,level=.90),model.3mm$coefficients)[,c(1,3,2)]
+model.3mm.results<-cbind(model.3mm.results,p.adjust(coef(summary(model.3mm))[,4],method="fdr"))
+
+model.QC2<-glm(!ABCD_rsfmri_QC2 ~ sex + household.income + p.edu + race_ethnicity.factor + ksads_factor + pds_category + adi.z + coi.z + nihtbx_flanker_agecorrected.z + nihtbx_cryst_agecorrected.z + nihtbx_totalcomp_agecorrected.z + pea_wiscv_tss.z + pfactor.z + INT.z + EXT.z + interview_age.z + bmiAgeZ,data=df,family="binomial")
+model.QC2.results<-cbind(confint(model.QC2,level=.90),model.QC2$coefficients)[,c(1,3,2)]
+#model.QC2.results<-cbind(model.QC2.results,coef(summary(model.QC2))[,4])
+model.QC2.results<-cbind(model.QC2.results,p.adjust(coef(summary(model.QC2))[,4],method="fdr"))
+
+model.2mm<-glm(!gframes_0.2_375 ~ sex + household.income + p.edu + race_ethnicity.factor + ksads_factor + pds_category + adi.z + coi.z + nihtbx_flanker_agecorrected.z + nihtbx_cryst_agecorrected.z + nihtbx_totalcomp_agecorrected.z + pea_wiscv_tss.z + pfactor.z + INT.z + EXT.z + interview_age.z + bmiAgeZ,data=df,family="binomial")
+model.2mm.results<-cbind(confint(model.2mm,level=.90),model.2mm$coefficients)[,c(1,3,2)]
+model.2mm.results<-cbind(model.2mm.results,p.adjust(coef(summary(model.2mm))[,4],method="fdr"))
+
+model.site.2mm<-glm(!gframes_0.2_375 ~ sex + household.income + p.edu + race_ethnicity.factor + ksads_factor + pds_category + adi.z + coi.z + nihtbx_flanker_agecorrected.z + nihtbx_cryst_agecorrected.z + nihtbx_totalcomp_agecorrected.z + pea_wiscv_tss.z + pfactor.z + INT.z + EXT.z + interview_age.z + bmiAgeZ + site_id_l,data=df,family="binomial")
+
+model.1mm<-glm(!gframes_0.1_375 ~ sex + household.income + p.edu  + race_ethnicity.factor + ksads_factor + pds_category + adi.z + coi.z + nihtbx_flanker_agecorrected.z + nihtbx_cryst_agecorrected.z + nihtbx_totalcomp_agecorrected.z + pea_wiscv_tss.z + pfactor.z + INT.z + EXT.z + interview_age.z + bmiAgeZ,data=df,family="binomial")
+model.1mm.results<-cbind(confint(model.1mm,level=.90),model.1mm$coefficients)[,c(1,3,2)]
+model.1mm.results<-cbind(model.1mm.results,p.adjust(coef(summary(model.1mm))[,4],method="fdr"))
+
+model.site.1mm<-glm(!gframes_0.1_375 ~ sex + household.income + p.edu  + race_ethnicity.factor + ksads_factor + pds_category + adi.z + coi.z + nihtbx_flanker_agecorrected.z + nihtbx_cryst_agecorrected.z + nihtbx_totalcomp_agecorrected.z + pea_wiscv_tss.z + pfactor.z + INT.z + EXT.z + interview_age.z + bmiAgeZ + site_id_l,data=df,family="binomial")
+
+ORformat<-\(x) {DescTools::Format(exp(x),digits=2,ldigits=0)}
+Mformat<-\(m) {
+  stars<-sdlabFunctions::starPs(m[,4])
+#  cbind(
+    paste0(ORformat(m[,2]),stars)#,
+        #       "\n[",ORformat(m[,1]),"–",ORformat(m[,3]),"]")#,
+        #DescTools::Format(m[,4],digits=2,ldigits=0,sci=30)
+        #m[,4]
+  #)
+}
+
+h1modelstable<-cbind(Mformat(model.QC1.results),
+                     Mformat(model.ABCC.results),
+                     Mformat(model.5mm.results),
+                     Mformat(model.4mm.results),
+                     Mformat(model.3mm.results),
+                     Mformat(model.QC2.results),
+                     Mformat(model.2mm.results),
+                     Mformat(model.1mm.results))
+#h1modelstable[h1modelstable==".00"]<-"<.01"
+
+alllevels<-c("Intercept",
+      "Sex (Male)",
+      "  $0-$25k",
+      "  $25-$50k",
+      "  $50-$75k",
+      "  $75-$100k",
+      "  >$200k",
+      "  <High School",
+      "  HS Grad.",
+      "  Some College",
+      "  Graduate",
+      "  Black",
+      "  Hispanic",
+      "  Asian",
+      "  Other",
+      "  1 Trauma",
+      "  >=2 Trauma",
+      "  Early Puberty",
+      "  Mid Puberty",
+      "  Late Puberty",
+      "  Post Pubertal",
+      "Area Disadvantage",
+      "Child Opportunity",
+      "NIHTB Flanker",
+      "NIHTB Crystalized",
+      "NIHTB Total",
+      "WISC V Matrix",
+      "Psychopathology",
+      "Internalizing",
+      "Externalizing",
+      "Age",
+      "BMI"
+      )
+
+
+h1hux<-as_hux(h1modelstable) %>% 
+  insert_column(alllevels) %>% 
+  insert_row("Household Income (ref: $100-$200k)",after=2,colspan=9,fill="") %>% 
+  insert_row("Highest Parental Education (ref: College Degree)",after=8,colspan=9,fill="") %>% 
+  insert_row("Census Race/Ethnicity (ref: White)",after=13,colspan=9,fill="") %>% 
+  insert_row("KSADS Trauma Count (ref: 0 Exposures)",after=18,colspan=9,fill="") %>% 
+  insert_row("Pubertal Status (ref: pre-pubertal)",after=21,colspan=9,fill="") %>% 
+  #insert_row(c("Variable",rep(c("OR\n[90% CI]","p.fdr"),5)),after=0)
+  insert_row(c("Variable",rep(c("OR"),8)),after=0) %>% 
+  insert_row(c("","T","C",".5",".4",".3","R",".2",".1"))
+
+colnames(h1hux)[1]<-"h1"
+
+h1hux
+```
+All p values fdr corrected. \*: p<.05, \*\*p<.01, \*\*\*: p<.001
+
+\newpage
+
+#  Figures
+
+## Upset Plot
+
+```{r}
+#ggupset implementation
+library(ggupset)
+setsdf<- df %>%
+  select(c(subjectkey,ABCD_rsfmri_QC1,ABCD_rsfmri_QC2,any_rest)) %>%
+  rename("T"="ABCD_rsfmri_QC1",
+         "R"="ABCD_rsfmri_QC2",
+         "C"="any_rest") %>% 
+  rowwise %>% 
+  mutate(sets = list(names(select(.,
+            where(is.logical)))[c_across(where(is.logical))])) %>%
+       ungroup 
+
+cairo_pdf(filename="Upset.PDF",
+          height=16,
+          width=27.9/2,
+          pointsize=24,
+          family="Red hat display")
+
+ggplot(setsdf,aes(x=sets)) +
+  theme(axis.title.x = element_blank(),
+        axis.text.y=element_text(size=30),
+        plot.title=element_text(size=34,face="bold")) +
+  ggtitle("Inconsistencies in Inclusion Criteria across ABCD/C") +
+  ylab("n") +
+  geom_bar() +
+  geom_text(stat='count',
+            aes(label=after_stat(count)),
+            vjust=-1,
+            family="Red hat Display",
+            size=24 / .pt) +
+  expand_limits(y=c(0,8000)) +
+  scale_x_upset() +
+  theme_combmatrix(combmatrix.panel.line.size=0,
+                   combmatrix.panel.point.size=10,
+                   combmatrix.label.text=element_text(color="black",
+                                                      size=30))
+
+dev.off()
+
+```
+
+## Inset set size chart
+
+```{r}
+levelsdf$Levelf<-factor(levelsdf$Level,levels=c(
+    "Full (F)",
+    "ABCD 4 Tabulated (T)",
+    "ABCC (C)",
+    "ABCC < .5mm",
+    "ABCC < .4mm",
+    "ABCC < .3mm",
+    "ABCD 4 Recommended (R)",
+    "ABCD < .2mm",
+    "ABCD < .1mm"
+  ),
+  labels = c(
+    "Full (**F**)",
+    "ABCD 4 Tabulated (**T**)",
+    "ABCC (**C**)",
+    "ABCC < .5mm",
+    "ABCC < .4mm",
+    "ABCC < .3mm",
+    "ABCD 4 Recommended (**R**)",
+    "ABCD < .2mm",
+    "ABCD < .1mm"
+  ))
+
+cairo_pdf(filename="insetsetsize.PDF",
+          height=8.5,
+          width=9.5,
+          pointsize=24,
+          family="Red hat display")
+library(ggtext)
+
+ggplot(levelsdf,aes(x=Levelf,y=Count,label=Count)) +
+  #labs(title="Sample Key and Counts") + # This is getting inserted manually.
+  geom_point(color="#c5050c",size=10,alpha=0.6) +
+  geom_segment(aes(x=Levelf,xend=Levelf,y=0,yend=Count),color="#646569") +
+  scale_x_discrete(limits = rev(levels(levelsdf$Levelf))) +
+  coord_flip() +
+  theme(axis.ticks.y=element_blank(),
+        axis.title.y=element_blank(),
+        axis.title.x=element_blank(),
+        axis.text.y=element_markdown(size=24,family="Red hat Display"),
+        plot.title=element_text(size=34,face="bold")) +
+  geom_text(nudge_x = .25,nudge_y=-1400,family="Red hat Display",
+            size=20 / .pt)
+
+dev.off
+```
+
+
+## Cat variable figure. 
+
+```{r}
+bools<-c("full", 
+         "ABCD_rsfmri_QC1",
+         "any_rest",
+         "gframes_0.5_375",
+         "gframes_0.4_375",
+         "gframes_0.3_375",
+         "ABCD_rsfmri_QC2",
+         "gframes_0.2_375",
+         "gframes_0.1_375")
+
+catvars<-c("sex",
+             "household.income",
+             "p.edu",
+             "race_ethnicity.factor",
+             "ksads_factor",
+             "pds_category")
+
+#This replaces NA with 'missing' for tabulation and reverses the scrubbing vars.
+dfcatna<- df %>% select(c(ends_with(catvars),ends_with(bools))) %>% 
+  mutate(across(ends_with(catvars),~ factor(.x,levels=levels(addNA(.x)),labels=c(levels(.x),"Missing"),exclude=NULL)))
+
+catvar375figdf<-data.frame(variable=character(),
+                         level=character())
+for (var in catvars) {
+  levels <- levels(dfcatna[[var]])
+  var_df <- data.frame(
+    variable = var,
+    level = levels
+  )
+  # Append the data frame to the levels_df
+  catvar375figdf <- rbind(catvar375figdf, var_df)
+}
+
+dfcatna$full=TRUE
+
+for(b in bools) {
+  n<-sum(dfcatna[,b])
+  v<-sapply(1:nrow(catvar375figdf),\(x) {
+    vname<-catvar375figdf[x,"variable"]
+    tlevel<-catvar375figdf[x,"level"]
+    vmatch<-dfcatna[[vname]]==tlevel
+    sum(vmatch & dfcatna[[b]])/n
+  })
+  catvar375figdf[,b]<-v*100
+}
+  
+catvar375figdflong <- catvar375figdf %>% 
+  pivot_longer(full:gframes_0.1_375) %>% 
+  mutate(thresh=factor(name,levels=bools,labels=c("F",
+                                                  "T",
+                                                  "C",
+                                                  ".5",
+                                                  ".4",
+                                                  ".3",
+                                                  "R",
+                                                  ".2",
+                                                  ".1"))) %>% 
+  mutate(levelf=as.factor(level)) %>% 
+  mutate(variable=as.factor(variable))
+
+cp1<-catvar375figdflong %>% 
+  filter(variable=="sex") %>% 
+  mutate(level=as.factor(level)) %>% 
+  ggplot(aes(x=thresh,y=value,fill=level)) +
+      geom_bar(position="fill",stat="identity") +
+      scale_fill_viridis(discrete = TRUE) +
+      labs(title="Sex Assigned at Birth") +
+      theme(axis.title.y=element_blank(),
+            axis.text.y=element_blank(),
+            axis.title.x=element_blank(),
+            axis.ticks.y=element_blank(),
+            legend.title=element_blank())
+
+cp2<-catvar375figdflong %>% 
+  filter(variable=="household.income") %>% 
+  mutate(level=factor(level,levels=levels(dfcatna$household.income))) %>% 
+  ggplot(aes(x=thresh,y=value,fill=level)) +
+      geom_bar(position="fill",stat="identity") +
+      scale_fill_viridis(discrete = TRUE) +
+      labs(title="Household Income") +
+      theme(axis.title.y=element_blank(),
+            axis.text.y=element_blank(),
+            axis.title.x=element_blank(),
+            axis.ticks.y=element_blank(),
+            legend.title=element_blank())
+
+cp3<-catvar375figdflong %>% 
+  filter(variable=="race_ethnicity.factor") %>% 
+  mutate(level=factor(level,levels=levels(dfcatna$race_ethnicity.factor))) %>% 
+  ggplot(aes(x=thresh,y=value,fill=level)) +
+      geom_bar(position="fill",stat="identity") +
+      scale_fill_viridis(discrete = TRUE) +
+      labs(title="Census Race/Ethnicity") +
+      theme(axis.title.y=element_blank(),
+            axis.text.y=element_blank(),
+            axis.title.x=element_blank(),
+            axis.ticks.y=element_blank(),
+            legend.title=element_blank())
+
+cp4<-catvar375figdflong %>% 
+  filter(variable=="ksads_factor") %>% 
+  mutate(level=as.factor(level)) %>% 
+  ggplot(aes(x=thresh,y=value,fill=level)) +
+      geom_bar(position="fill",stat="identity") +
+      scale_fill_viridis(discrete = TRUE) +
+      labs(title="Trauma Count") +
+      theme(axis.title.y=element_blank(),
+            axis.text.y=element_blank(),
+            axis.title.x=element_blank(),
+            axis.ticks.y=element_blank(),
+            legend.title=element_blank())
+
+
+cp5<-catvar375figdflong %>% 
+  filter(variable=="pds_category") %>% 
+  mutate(level=factor(level,levels=levels(dfcatna$pds_category))) %>% 
+  ggplot(aes(x=thresh,y=value,fill=level)) +
+      geom_bar(position="fill",stat="identity") +
+      scale_fill_viridis(discrete = TRUE) +
+      labs(title="Pubertal Status") +
+      theme(axis.title.y=element_blank(),
+            axis.text.y=element_blank(),
+            axis.title.x=element_blank(),
+            axis.ticks.y=element_blank(),
+            legend.title=element_blank())
+
+cp6<-catvar375figdflong %>% 
+  filter(variable=="p.edu") %>% 
+  mutate(level=factor(level,levels=levels(dfcatna$p.edu))) %>% 
+  ggplot(aes(x=thresh,y=value,fill=level)) +
+      geom_bar(position="fill",stat="identity") +
+      scale_fill_viridis(discrete = TRUE) +
+      labs(title="Parent Education") +
+      theme(axis.title.y=element_blank(),
+            axis.title.x=element_blank(),
+            axis.text.y=element_blank(), 
+            axis.ticks.y=element_blank(),
+            legend.title=element_blank())
+```
+
+```{r}
+#,fig.cap="Levels of Categorical Variables by QC Stringency -- 375 frames of data required",fig.height=15,fig.width=12
+#The figures are in this order to save space on legend width.
+cairo_pdf(filename="CatVarFig.pdf",
+          height=16,
+          width=27.9/2,
+          pointsize=24,
+          family="Red hat display")
+((cp1 / cp4 / cp3) |
+  (cp2 / cp6 / cp5)) +
+   plot_annotation(title = 'Categorical Variables by Inclusion Criteria',
+                   theme=theme(plot.title=element_text(size=34,face="bold")))
+grid::grid.draw(grid::textGrob("Proportion at Threshold",x=.01,rot=90))
+grid::grid.draw(grid::textGrob("QC Threshold",y=.01))
+dev.off()
+```
+
+##Cont variable figure
+
+```{r}
+#we need ymin, ymax, lower, upper, and middle for each variable in each condition.
+bpstats <- function(var,bool) {
+  message(paste0("var is ",var))   
+  message(paste0("bool is ",bool))
+  x<-df[df[[bool]],var]
+  minvalue=min(x,na.rm=TRUE)
+  maxvalue=max(x,na.rm=TRUE)
+  median=median(x,na.rm = TRUE)
+  low=quantile(x,.25,na.rm=TRUE)
+  high=quantile(x,.75,na.rm=TRUE)
+  IQR=high-low
+  mn=max(low-1.5*IQR,minvalue)
+  mx=min(high+1.5*IQR,maxvalue)
+  return(data.frame(lwhisk=mn,low=low,median=median,high=high,uwhisk=mx))
+}
+
+cvars <- c(
+    "adi.z",
+    "coi.z",
+    "nihtbx_flanker_agecorrected.z",
+    "nihtbx_cryst_agecorrected.z",
+    "nihtbx_totalcomp_agecorrected.z",
+    "pea_wiscv_tss.z",
+    "pfactor.z",
+    "INT.z",
+    "EXT.z",
+    "interview_age.z",
+    "bmiAgeZ"
+  )
+
+df$full=TRUE
+
+ContFig375df<-expand.grid(as.factor(cvars),unique(bools)) %>%
+  mutate(Var1 = as.character(Var1),
+         Var2 = as.character(Var2)) %>%
+  rowwise() %>%
+  mutate(bpstats(Var1,Var2))
+
+ContFig375df$measp<-factor(ContFig375df$Var1,
+                           levels=cvars,
+                           labels=c("Area Disadvantage",
+                                    "Child Opportunity",
+                                    "NIHTB Flanker",
+                                    "NIHTB Crystalized",
+                                    "NIHTB Total",
+                                    "WISC V Matrix",
+                                    "Psychopathology (p)",
+                                    "Internalizing",
+                                    "Externalizing",
+                                    "Age",
+                                    "BMI"))
+
+ContFig375df$thresh <- factor(
+  ContFig375df$Var2,
+  levels = bools,
+  labels = c("F",
+             "T",
+             "C",
+             ".5",
+             ".4",
+             ".3",
+             "R",
+             ".2",
+             ".1")
+)
+
+
+Contfig375<-ggplot(ContFig375df,aes(x=thresh,ymin=lwhisk,lower=low,middle=median,upper=high,ymax=uwhisk)) +
+  geom_boxplot(stat="identity") +
+  ylab("Z") +
+  theme(axis.title.x=element_blank(),
+        plot.title=element_text(size=34,face="bold")) +
+  ggtitle("Continuous Variables by Inclusion Criteria") +
+  facet_wrap(~measp,scales = "free")
+
+cairo_pdf(filename="ContVarFig.pdf",
+          height=16,
+          width=27.9/2,
+          pointsize=24,
+          family="Red hat display")
+Contfig375
+dev.off()
+```
+
+## QCFC Figures
+
+```{r}
+#Get the data
+files=c("../ABCC_download/GlasserDistances/glasserdistances.txt",
+        list.files("../ABCC_download/",pattern="QCFC.*csv",full.names = TRUE))
+#A list of vectors:
+QCFCvals<-lapply(files,scan,sep=",")
+# The distance matrix only has cortical distances, so trim the QC-FC values to
+# those dimensions. All of these matrices are symmetrical across the diagonal,
+# so we can also omit the diagonal and lower triangle.
+tdim=sqrt(length(QCFCvals[[1]]))
+QCFCtrimvals <- lapply(QCFCvals,\(x) {
+  m=matrix(x,ncol=sqrt(length(x)),byrow=TRUE)
+  m2=m[1:tdim,1:tdim]
+  m2[lower.tri(m2,diag = TRUE)] <- NA
+  na.omit(c(m2))
+  })
+
+QCFCdf<-as.data.frame(reduce(QCFCtrimvals,cbind))
+names(QCFCdf)<-c("distance","<.1mm","<.2mm","<.3mm","<.4mm","<.5mm","No Scrubbing")
+QCFCdflong <- QCFCdf %>% pivot_longer(cols=-distance,
+                                      names_to="threshold",
+                                      values_to="QCFC")
+
+# Calculate Slopes
+QCFCdfz <- QCFCdf %>%
+  mutate(across(.fns=scale))
+
+annotext<-function(x) {
+  m<-lm(QCFCdfz$distance ~ QCFCdfz[,x])
+  ci<-confint(m,level=.80)
+  spec="%.2f"
+  paste0("β = ",
+         sprintf(spec,m$coefficients[2]),
+         ", 99% CI [",
+         sprintf(spec,ci[2,1]),
+         " ",
+         sprintf(spec,ci[2,2]),
+         "]")
+}
+
+annot<-data.frame(threshold=unique(QCFCdflong$threshold),
+                 text=sapply(unique(QCFCdflong$threshold),annotext))
+annot$text<-gsub("0\\.", ".", annot$text)
+annot$distance=mean(range(QCFCdflong$distance))
+annot$QCFC=.1
+```
+
+
+```{r fig.cap="Hexagonal binned density plots of the correlation between participants' functional connectivity in each pair of regions in the HCP 2016 cortical atlas and framewise displacement, plotted against the average euclidean distance between said regions. Data from all ABCC participants is included (n=9,600)",fig.height=7.5,fig.width=10}
+
+cairo_pdf(filename="QCFC.pdf",
+          height=16,
+          width=27.9/2,
+          pointsize=24,
+          family="Red hat display")
+
+ggplot(QCFCdflong,aes(x=distance,y=QCFC)) +
+  geom_hex(aes(color=..count..),bins=40) +
+  labs(title="QC-FC correlations by distance at 6 scrubbing thresholds.",
+       x="ROI Distance (mm)",
+       y="QC-FC") +
+  theme(legend.position="none",
+        plot.title=element_text(size=34,face="bold")) +
+  scale_fill_gradient(low="white",high="black") +
+  scale_colour_gradient(low="white",high="black") +
+  geom_smooth(method="lm",color="red") +
+  facet_wrap(~threshold) +
+  geom_text(data=annot,mapping=aes(label=text),family="Red hat Display",
+            size=24 / .pt)
+
+dev.off
+```
+
+
+\newpage
+
+# Conclusions
+
+* Exclusions due to scan quality (before motion censoring) are a major source of missingness.
+* Inclusion recommendations may change markedly between releases/dataset versions.
+* QC exclusions affect sample characteristics including parent education, neighborhood characteristics, sex, census race/ethnicity, psychopathology, age, cognitive performance, and BMI.
+
+\newpage
+
+QC-related missingness in ABCD rsFMRI data varies by reporter. QC choices alter sample characteristics.
+
+\newpage
+
+# Supplemental
+
+
+```{r}
+#gg_miss_upset(df %>% select(c(interview_age:household.income,p.edu,race_ethnicity.factor:site_id_l)),nintersects=6,nsets=8)
+
+df %>%
+  select(c(interview_age:household.income,p.edu,race_ethnicity.factor:site_id_l)) %>%
+  rename(c("Child Opportunity Index"="coi","Household Income"="household.income","Area Disadvantage Index"="adi","NIH Toolbox Total"="nihtbx_totalcomp_agecorrected","NIH Toolbox Crystalized"="nihtbx_cryst_agecorrected","WISC V"="pea_wiscv_tss","NIH Toolbox Flanker"="nihtbx_flanker_agecorrected","Pubertal Status"="pds_category")) %>% 
+  summarise_all(~sum(is.na(.))) %>% 
+  pivot_longer(everything()) %>% 
+  filter(value>50) %>% 
+  arrange(desc(value)) %>% 
+  rename(c("Variable"="name","n Missing"="value")) %>% as_hux() %>% 
+  set_header_rows(1,TRUE) %>% 
+  set_caption("Behavioral and Demographic variables with >50 missing values")
+
+# # Need 'high risk' cells.
+# 
+# # Old table do an upset instead.
+# itab<-as_hux(df %>% count(fastqcok,ABCD_rsfmri_QC2.cdf,any_rest)) %>% 
+#   theme_basic() %>% 
+#   mutate(across(everything(),~str_replace(.,"FALSE","X")),
+#          across(everything(),~str_replace(.,"TRUE","✓")))
+# 
+# itab[1,] <- c("FQC","DAIRC","ABCC","n")
+```
+
+
+\newpage
+
+# Multiply at Risk Cell Counts
+
+```{r}
+subdf1 <- df %>% 
+  filter(race_ethnicity.factor!="White",
+         pfactor.z>=1.5)
+
+subtable1<-data.frame(
+  "F"=nrow(subdf1),
+  "T"=sum(subdf1$ABCD_rsfmri_QC1),
+  "C"=sum(subdf1$any_rest),
+  ".5"=sum(subdf1$gframes_0.5_375),
+  ".4"=sum(subdf1$gframes_0.4_375),
+  ".3"=sum(subdf1$gframes_0.3_375),
+  "R"=sum(subdf1$ABCD_rsfmri_QC2),
+  ".2"=sum(subdf1$gframes_0.2_375),
+  ".1"=sum(subdf1$gframes_0.1_375)
+  ) %>% 
+  as_hux() %>% 
+  set_header_rows(1,TRUE) %>% 
+  set_caption("Non-white (census) with psychopathology at z >= 1.5")
+
+
+subtable1[1,]<-gsub("X\\.","\\.",subtable1[1,])
+
+subdf2 <- df %>% 
+  filter(nihtbx_totalcomp_agecorrected.z<=-1.5,
+         sex=="M")
+
+subtable2<-data.frame(
+  "F"=nrow(subdf2),
+  "T"=sum(subdf2$ABCD_rsfmri_QC1),
+  "C"=sum(subdf2$any_rest),
+  ".5"=sum(subdf2$gframes_0.5_375),
+  ".4"=sum(subdf2$gframes_0.4_375),
+  ".3"=sum(subdf2$gframes_0.3_375),
+  "R"=sum(subdf2$ABCD_rsfmri_QC2),
+  ".2"=sum(subdf2$gframes_0.2_375),
+  ".1"=sum(subdf2$gframes_0.1_375)
+  ) %>% 
+  as_hux() %>% 
+  set_header_rows(1,TRUE) %>% 
+  set_caption("Male participants with NIH toolbox total scores of z <= -1.5")
+
+subtable2[1,]<-gsub("X\\.","\\.",subtable2[1,])
+```
+
+`r subtable1`
+
+`r subtable2`
+
+\newpage
+
+# References
+

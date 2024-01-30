@@ -1,0 +1,1 @@
+PosterText.Rmd, together with the included word template, generates the peripheral text of the poster as a docx file and the central panels as pdf documents. The docx was converted to pdf, and a [vector graphics editor (Inkscape)](https://inkscape.org/) was then used to compose the poster from the intermediate pdf files.
