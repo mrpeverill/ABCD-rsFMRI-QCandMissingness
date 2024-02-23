@@ -1,0 +1,367 @@
+---
+title: "Simulations and Modeling Strategy"
+author: "Matthew Peverill"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 3
+    toc_float:
+      collapsed: true
+---
+
+This document describes a series of simulations performed in order to develop a model testing our second hypothesis (that bias would become more severe as QC became more stringent). We are simulating missingness of sex as the underlying distribution is known. We simulate participant missingness under a number of conditions. To improve the verisimilitude of the simulations, we aimed approximately for the missingness levels we see in our data at no scrubbing and each of the five motion scrubbing thresholds:
+
+* 0.191647019
+* 0.215223981
+* 0.22010778
+* 0.233917144
+* 0.283681374
+* 0.557931964
+
+# Simulation
+
+```{r}
+library(tidyverse)
+library(lme4)
+library(rsq)
+library(emmeans)
+library(lattice)
+library(lmerTest)
+set.seed(101)
+emm_options(pbkrtest.limit = 72000)
+
+base <- data.frame(
+  sid = 1:12000,
+  miss.0 = rep(FALSE, 12000),
+  miss.1 = rep(FALSE, 12000),
+  miss.2 = rep(FALSE, 12000),
+  miss.3 = rep(FALSE, 12000),
+  miss.4 = rep(FALSE, 12000),
+  miss.5 = rep(FALSE, 12000),
+  sex = as.factor(rbinom(12000, 1, .5))
+)
+
+# In the null simulation, each step has a bit more missing regardless of sex.
+# The exact number are based on what we see in the data.
+nulsim <- base
+nulsim$miss.0[1:2276] <- TRUE
+nulsim$miss.1[1:2556] <- TRUE
+nulsim$miss.2[1:2614] <- TRUE
+nulsim$miss.3[1:2778] <- TRUE
+nulsim$miss.4[1:3369] <- TRUE
+nulsim$miss.5[1:6626] <- TRUE
+nulsim <- # shuffle pt order to avoid optimizer problems.
+  nulsim %>% slice_sample(prop = 1) %>% mutate(sid = as.factor(sid))
+nulsim.l <-
+  nulsim %>% pivot_longer(c(-sex, -sid), names_to = "stringency", values_to =
+                            "ismiss")
+nulsim.l$pmiss <- rep(nulsim.l %>%
+                        group_by(stringency) %>%
+                        summarise(cnt = sum(ismiss) / 12000) %>%
+                        pull(cnt),
+                      12000)
+
+
+replace_true_conditional <- function(vec, vec2, p1, p2) {
+  zero_indices <- which(vec2 == 0)
+  one_indices <- which(vec2 == 1)
+  # Replace zero indices up to p1*total length with TRUE
+  vec[zero_indices[1:(p1 * length(zero_indices))]] <- TRUE
+  # Replace one indices up to p2*total length with TRUE
+  vec[one_indices[1:(p2 * length(one_indices))]] <- TRUE
+  return(vec)
+}
+
+# H1 simulation: each step has 12% more missing males and 8% more missing
+# females (i.e. there is a bias but it is of the same size as stringency
+# increases.)
+h1sim <- base
+h1sim$miss.1 <-
+  replace_true_conditional(h1sim$miss.0, h1sim$sex, .08, .12)
+h1sim$miss.2 <-
+  replace_true_conditional(h1sim$miss.0, h1sim$sex, .16, .24)
+h1sim$miss.3 <-
+  replace_true_conditional(h1sim$miss.0, h1sim$sex, .24, .36)
+h1sim$miss.4 <-
+  replace_true_conditional(h1sim$miss.0, h1sim$sex, .36, .48)
+h1sim$miss.5 <-
+  replace_true_conditional(h1sim$miss.0, h1sim$sex, .42, .62)
+h1sim <-
+  h1sim %>% slice_sample(prop = 1) %>% mutate(sid = as.factor(sid))
+h1sim.l <-
+  h1sim %>% pivot_longer(c(-sex, -sid), names_to = "stringency", values_to =
+                           "ismiss")
+h1sim.l$pmiss <- rep(h1sim.l %>%
+                       group_by(stringency) %>%
+                       summarise(cnt = sum(ismiss) / 12000) %>%
+                       pull(cnt),
+                     12000)
+
+# H2 simulation: Missingness starts out equal, but gets more severe at each step.
+h2sim <- base
+h2sim$miss.1 <-
+  replace_true_conditional(h2sim$miss.0, h2sim$sex, .8, .12)  #4
+h2sim$miss.2 <-
+  replace_true_conditional(h2sim$miss.0, h2sim$sex, .16, .26) #10
+h2sim$miss.3 <-
+  replace_true_conditional(h2sim$miss.0, h2sim$sex, .24, .42) #18
+h2sim$miss.4 <-
+  replace_true_conditional(h2sim$miss.0, h2sim$sex, .32, .60) #28
+h2sim$miss.5 <-
+  replace_true_conditional(h2sim$miss.0, h2sim$sex, .42, .80) #38
+h2sim <-
+  h2sim %>% slice_sample(prop = 1) %>% mutate(sid = as.factor(sid))
+h2sim.l <-
+  h2sim %>% pivot_longer(c(-sex, -sid), names_to = "stringency", values_to =
+                           "ismiss")
+h2sim.l$pmiss <- rep(h2sim.l %>%
+                       group_by(stringency) %>%
+                       summarise(cnt = sum(ismiss) / 12000) %>%
+                       pull(cnt),
+                     12000)
+
+```
+
+# Modeling random missingness (null simulation)
+
+First let's look at the null model simulated data. What we should find is that there is no effect of sex, no effect of sex interacting with pmiss, and that predicted probability of exclusion corresponds approximately to the % of sample excluded (i.e., the model predicts accurately).
+
+The variable 'pmiss' is our within-subject variable and it describes how much data is excluded in each of the 6 conditions. Let's do a quick check that pmiss matches the actual percentage missing in each condition.
+
+```{r}
+nulsim.l %>% group_by(pmiss) %>% summarise(missing=mean(ismiss))
+```
+
+
+## Fixed Effects Models
+
+Here is a basic fixed effect model:
+
+```{r}
+m.nulsim.fixed <-
+  glm(ismiss ~ pmiss + sex * pmiss, data = nulsim.l,  family = "binomial")
+summary(m.nulsim.fixed)
+lsmeans(m.nulsim.fixed,
+        "pmiss",
+        type = "response",
+        at = list(pmiss = c(0, .1, .2, .3, .4, .5)))
+```
+
+Pretty good -- the model terms are significant in the expected pattern (except the intercept -- but it's small) and the marginal means are fairly accurate.
+
+If pmiss is zero, then odds of missingness for any participant could be assumed to be 0. Consequently, it might be appropriate to remove the intercept and main effect of sex:
+
+```{r}
+m.nulsim.fixed.stripped <-
+  glm(ismiss ~ pmiss + pmiss:sex + 0, data = nulsim.l,  family = "binomial")
+summary(m.nulsim.fixed.stripped)
+lsmeans(m.nulsim.fixed.stripped,
+        "pmiss",
+        type = "response",
+        at = list(pmiss = c(0, .1, .2, .3, .4, .5)))
+```
+
+This 'stripped' version is not accurate. Because of the logit transformation, the intercept of 0 corresponds to a probability of .5, which is definitely incorrect. It may not be possible to specify a 0 probability intercept (logit value of -Infinity).
+
+## Mixed Effects Models
+
+Let's keep working with the 'full' models and add the random effects. First we'll add a random intercept, then a random effect of pmiss.
+
+```{r}
+m.nulsim.randint <-
+  glmer(ismiss ~ pmiss + sex + sex:pmiss + (1 | sid),
+        data = nulsim.l,
+        family = "binomial")
+summary(m.nulsim.randint)
+lsmeans(m.nulsim.randint,
+        "pmiss",
+        type = "response",
+        at = list(pmiss = c(0, .1, .2, .3, .4, .5)))
+
+m.nulsim.randpmiss <-
+  glmer(ismiss ~ pmiss + sex + sex:pmiss + (pmiss |
+                                              sid),
+        data = nulsim.l,
+        family = "binomial")
+summary(m.nulsim.randpmiss)
+lsmeans(m.nulsim.randpmiss,
+        "pmiss",
+        type = "response",
+        at = list(pmiss = c(0, .10, .20, .30, .40, .50)))
+plot(lsmean ~ pmiss,
+     data = lsmeans(
+       m.nulsim.randpmiss,
+       "pmiss",
+       type = "response",
+       at = list(pmiss = c(0, .1, .2, .3, .4, .5))
+     ))
+
+```
+
+Both of the obvious random effects models under-perform. The fixed effect terms are significant in the expected pattern, but the marginal means are way off. Possibly there is some odd effect stemming from the nature of exclusion as an event -- i.e. if a participant is missing at .2mm of scrubbing, then they are also (always) missing at .1, and so on. 
+
+### Checking assumptions
+
+Let's do some assumption checks:
+
+```{r}
+# homogeneity
+plot(m.nulsim.randpmiss,main="Homogeneity (fitted vs residual)")
+# error normality 
+qqmath(m.nulsim.randpmiss,main="Error QQ plot ")
+# random effects normality
+r_int<- ranef(m.nulsim.randpmiss)$sid$`(Intercept)`
+qqnorm(r_int,main="Random Intercept QQ plot")
+qqline(r_int)
+
+r_slope<- ranef(m.nulsim.randpmiss)$sid$pmiss
+qqnorm(r_slope,main="Random Slope QQ plot")
+qqline(r_slope)
+```
+
+Not good on both counts. 
+
+
+## Linear mixed effect model.
+
+What if we ditch the logistic function and just try to model probability?
+
+```{r}
+m.nulsim.randpmiss.linear <-
+  lmer(ismiss ~ pmiss + sex + sex:pmiss + (pmiss | sid),
+        data = nulsim.l)
+summary(m.nulsim.randpmiss.linear)
+lsmeans(m.nulsim.randpmiss.linear,
+        "pmiss",
+        at = list(pmiss = c(0, .1, .2, .3, .4, .5)))
+plot(lsmean ~ pmiss,
+     data = lsmeans(
+       m.nulsim.randpmiss.linear,
+       "pmiss",
+       at = list(pmiss = c(0, .1, .2, .3, .4, .5))
+     ))
+
+m.nulsim.randpmiss.noint.linear <-
+  lmer(ismiss ~ pmiss + sex + sex:pmiss + 0 + (0 + pmiss | sid),
+        data = nulsim.l)
+summary(m.nulsim.randpmiss.noint.linear)
+lsmeans(m.nulsim.randpmiss.noint.linear,
+        "pmiss",
+        at = list(pmiss = c(0, .1, .2, .3, .4, .5)))
+plot(lsmean ~ pmiss,
+     data = lsmeans(
+       m.nulsim.randpmiss.noint.linear,
+       "pmiss",
+       at = list(pmiss = c(0, .1, .2, .3, .4, .5))
+     ))
+```
+
+Both of these models work pretty well.
+
+## Summing up
+
+So far, it looks like we can do logistic regression OR have random effects. The random effect, linear, model appears to be a little more accurate. It may be that the logistic mixed-effect model is not working because pmiss increases linearly with probability, not logit probability. Let's plot the marginal means in greater detail for our two logistic regression models:
+
+```{r}
+m.nulsim.fixed
+
+mm1<-lsmeans(
+       m.nulsim.fixed,
+       "pmiss",
+       type = "response",
+       at = list(pmiss = seq(0,1,.05))
+     )
+mm2<-lsmeans(
+       m.nulsim.randpmiss,
+       "pmiss",
+       type = "response",
+       at = list(pmiss = seq(0,1,.05))
+     )
+mm3<-lsmeans(
+       m.nulsim.randpmiss.linear,
+       "pmiss",
+       at = list(pmiss = seq(0,1,.05))
+     )
+
+data.frame(
+  pmiss = summary(mm1)$pmiss,
+  fixedglm = summary(mm1)$lsmean,
+  mixedglm = summary(mm2)$lsmean,
+  mixedlm = summary(mm3)$lsmean
+) %>% pivot_longer(-pmiss, values_to = "lsmeans") %>% 
+  ggplot(aes(x = pmiss, y = lsmeans, color = name)) + 
+  geom_point()
+
+```
+So, the relation between pmiss and probability of exclusion is exactly linear. This probably make it hard to fit a logit, but it sort of works before we add random effects (the model diagnostic plots are still not good). What if we transform pmiss first?
+
+```{r}
+nulsim.l$pmisslogit<-qlogis(nulsim.l$pmiss)
+
+m.nulsim.randpmisslogit <-
+  glmer(ismiss ~ pmiss + sex + sex:pmisslogit + (pmisslogit |
+                                              sid),
+        data = nulsim.l,
+        family = "binomial")
+summary(m.nulsim.randpmisslogit)
+lsmeans(m.nulsim.randpmisslogit,
+        "pmisslogit",
+        type = "response",
+        at = list(pmisslogit = qlogis(c(.10, .20, .30, .40, .50))))
+```
+
+No that doesn't help.
+
+# Modeling H1
+
+Now we'll use data with a bias. Let's compare a 'full' model, one with no intercept, and one with no intercept and no main effect of sex.
+
+```{r}
+h1probepoints=list(pmiss=c(.1,.2,.3,.4,.5,.6),
+                   sex=unique(h1sim.l$sex))
+
+m.h1.full <-
+  lmer(ismiss ~ pmiss + sex + sex:pmiss + (pmiss | sid),
+        data = h1sim.l)
+summary(m.h1.full)
+rsq(m.h1.full)
+
+lsmeans.h1.full<-lsmeans(m.h1.full,
+        ~sex|pmiss,
+        "pmiss",
+        at = h1probepoints)
+
+plot(lsmean ~ pmiss,
+     data = lsmeans.h1.full
+     )
+
+m.h1.noint<-lmer(ismiss ~ pmiss + sex + sex:pmiss + 0 + (0 + pmiss | sid),
+        data = h1sim.l)
+summary(m.h1.full)
+lsmeans(m.h1.full,
+        "pmiss",
+        at = h1probepoints)
+
+plot(lsmean ~ pmiss,
+     data = lsmeans(
+       m.nulsim.randpmiss.noint.linear,
+       "pmiss",
+       at = h1probepoints)
+     )
+
+m.h1.nointnomain<-lmer(ismiss ~ pmiss + sex:pmiss + 0 + (0 + pmiss | sid),
+        data = h1sim.l)
+summary(m.h1.full)
+lsmeans(m.h1.full,
+        "pmiss",
+        at = h1probepoints)
+
+plot(lsmean ~ pmiss,
+     data = lsmeans(
+       m.nulsim.randpmiss.noint.linear,
+       "pmiss",
+       at = h1probepoints)
+     )
+```
+The full model shows no main effect of sex, but does show an interaction. This invalidates our analysis plan for H2, as we expected an interaction would indicate increasing bias by condition (but here we see one where the bias is constant as data is excluded). Instead, we will need to test for a quadratic interaction.
