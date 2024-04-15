@@ -27,7 +27,27 @@ st_options(plain.ascii       = FALSE, #leave on for development
            dfSummary.varnumbers        = FALSE,
            dfSummary.valid.col         = FALSE,
            use.x11 = FALSE,
-           dfSummary.graph.magnif      = 0.85) 
+           dfSummary.graph.magnif      = 0.85)
+
+privatize <- function(dataframe) {
+  # This function removes subject id's from output
+  # Step 1: Replace factors with character vectors
+  factors_columns <- sapply(dataframe, is.factor)
+  dataframe[factors_columns] <- lapply(dataframe[factors_columns], as.character)
+
+  # Step 2: Replace character values matching regex with "sid_removed"
+  regex_pattern1 <- "NDAR_INV[0-9A-Z]{8}"
+  regex_pattern2 <- "NDARINV[0-9A-Z]{8}"
+  dataframe <- lapply(dataframe, function(col) {
+    if (is.character(col)) {
+      col <- gsub(regex_pattern1, "sid_removed", col)
+      col <- gsub(regex_pattern2, "sid_removed", col)
+    }
+    return(col)
+  })
+
+  return(dataframe)
+}
 ```
 
 
@@ -581,7 +601,7 @@ tabcols$id<-c("subjectkey","interview_date","interview_age","sex")
 ```
 
 ```{r echo=FALSE,results='asis'}
-print(dfSummary(tabfull[,tabcols$id]))
+print(dfSummary(tabfull[,tabcols$id]) %>% privatize())
 ```
 
 There are `r sum(which(duplicated(tabfull$subjectkey)))` duplicated subject keys.
@@ -697,7 +717,10 @@ pander(tabfull %>%
          slice(1:20),
        caption="Race/Ethnicity Recode Examples: 20 Distinct Examples") 
 
-tabcols$re<-c("race_ethnicity.factor")
+tabcols$re<-colnames(tabfull %>% 
+                       select(race_ethnicity.factor,
+                              race.iden.white:race.iden.dontknow,
+                              ethn.iden.hisp))
 ```
 
 ```{r echo=FALSE,results='asis'}
@@ -873,7 +896,7 @@ tab$bmiAgeZ <-
     digits = 4
   )$bmiAgeZ
 
-tab %>% select(c(subjectkey,bmi:anthroheightcalc,bmiAgeZ)) %>% 
+tab %>% select(c(bmi:anthroheightcalc,bmiAgeZ)) %>% 
   filter((bmi > 80) | bmiAgeZ > 10) 
 
 tab[tab$bmi > 80 & !is.na(tab$bmi),"bmi"] <- NA
@@ -883,5 +906,5 @@ tab[tab$bmiAgeZ > 10 & !is.na(tab$bmiAgeZ),"bmiAgeZ"] <- NA
 ## Save
 
 ```{r}
-saveRDS(tab,"../RDS/tabulateddata.Rds")
+saveRDS(tab,"./tabulateddata.Rds")
 ```

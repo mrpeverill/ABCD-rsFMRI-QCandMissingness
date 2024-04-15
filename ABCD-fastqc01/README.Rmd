@@ -23,11 +23,31 @@ names(fastqc)<-t(tnames)
 cbind(t(tnames),t(desc))
 fastqc <- fastqc %>%
   select(c(subjectkey,visit,ftq_recalled,ftq_series_id,ftq_usable,ftq_notes,file_source))
+
+privatize <- function(dataframe) {
+  # This function removes subject id's from output
+  # Step 1: Replace factors with character vectors
+  factors_columns <- sapply(dataframe, is.factor)
+  dataframe[factors_columns] <- lapply(dataframe[factors_columns], as.character)
+
+  # Step 2: Replace character values matching regex with "sid_removed"
+  regex_pattern1 <- "NDARMC[0-9A-Z]{6}"
+  regex_pattern2 <- "NDARINV[0-9A-Z]{8}"
+  dataframe <- lapply(dataframe, function(col) {
+    if (is.character(col)) {
+      col <- gsub(regex_pattern1, "sid_removed", col)
+      col <- gsub(regex_pattern2, "sid_removed", col)
+    }
+    return(col)
+  })
+
+  return(dataframe)
+}
 ```
 
 The fastqc file is parsed and a few relevant columns are selected:
 
-`r pander(head(fastqc))`
+`r pander(head(fastqc) %>% privatize)`
 
 Now we filter for baseline images and exclude recalled images (these have either been replaced or had consent withdrawn, and are not available).
 
@@ -60,12 +80,12 @@ dwndabledf<-fastqc %>%
   group_by(subjectkey, imgtype) %>%
   summarize(usecount=length(ftq_usable)) %>%
   pivot_wider(id_cols=subjectkey,names_from=imgtype,values_from=usecount)
-dwndabledf <- dwndabledf %>% mutate(across(where(is.numeric),replace_na,0))
+dwndabledf <- dwndabledf %>% mutate(across(where(is.numeric),\(x) replace_na(x,0)))
 ```
 
 This yields, e.g.:
 
-`r pander(head(dwndabledf))`
+`r pander(head(dwndabledf) %>% privatize())`
 
 Participants with useable data will have a useable framemap, rs-fmri image, and T1. Here we construct a variable based on whether the user has enough images passing operator QC:
 
@@ -75,7 +95,7 @@ useabledf<-fastqc %>%
   group_by(subjectkey, imgtype) %>%
   summarize(usecount=length(ftq_usable)) %>%
   pivot_wider(id_cols=subjectkey,names_from=imgtype,values_from=usecount)
-useabledf <- useabledf %>% mutate(across(where(is.numeric),replace_na,0))
+useabledf <- useabledf %>% mutate(across(where(is.numeric),\(x) replace_na(x,0)))
 
 useabledf$T1ok<- (useabledf$T1 + useabledf$`T1-NORM`)>0
 
@@ -91,7 +111,7 @@ useabledf$fmok<- (useabledf$`fMRI-FM`>0) | (useabledf$`fMRI-FM-AP` > 0 & (useabl
 
 useabledf <- useabledf %>% 
   mutate(fastqcok = T1ok & rsfmriok & fmok) %>% 
-        mutate(across(ends_with("ok"),replace_na,FALSE))
+        mutate(across(ends_with("ok"),\(x) replace_na(x,FALSE)))
 ```
 
 # Inclusion Table

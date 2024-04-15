@@ -100,51 +100,55 @@ cbind(t(tnames),t(desc))
 ``` r
 fastqc <- fastqc %>%
   select(c(subjectkey,visit,ftq_recalled,ftq_series_id,ftq_usable,ftq_notes,file_source))
+
+privatize <- function(dataframe) {
+  # This function removes subject id's from output
+  # Step 1: Replace factors with character vectors
+  factors_columns <- sapply(dataframe, is.factor)
+  dataframe[factors_columns] <- lapply(dataframe[factors_columns], as.character)
+
+  # Step 2: Replace character values matching regex with "sid_removed"
+  regex_pattern1 <- "NDARMC[0-9A-Z]{6}"
+  regex_pattern2 <- "NDARINV[0-9A-Z]{8}"
+  dataframe <- lapply(dataframe, function(col) {
+    if (is.character(col)) {
+      col <- gsub(regex_pattern1, "sid_removed", col)
+      col <- gsub(regex_pattern2, "sid_removed", col)
+    }
+    return(col)
+  })
+
+  return(dataframe)
+}
 ```
 
 The fastqc file is parsed and a few relevant columns are selected:
 
-|  subjectkey  |           visit           | ftq_recalled |
-|:------------:|:-------------------------:|:------------:|
-| NDAR***REMOVED*** |  baseline_year_1\_arm_1   |      0       |
-| NDAR***REMOVED*** |  baseline_year_1\_arm_1   |      1       |
-| NDAR***REMOVED*** |  baseline_year_1\_arm_1   |      0       |
-| NDAR***REMOVED*** |  baseline_year_1\_arm_1   |      1       |
-| NDAR***REMOVED*** |  baseline_year_1\_arm_1   |      0       |
-| NDAR***REMOVED*** | 2_year_follow_up_y\_arm_1 |      1       |
+- **subjectkey**: *sid_removed*, *sid_removed*, *sid_removed*,
+  *sid_removed*, *sid_removed* and *sid_removed*
+- **visit**: *baseline_year_1\_arm_1*, *baseline_year_1\_arm_1*,
+  *baseline_year_1\_arm_1*, *baseline_year_1\_arm_1*,
+  *baseline_year_1\_arm_1* and *2_year_follow_up_y\_arm_1*
+- **ftq_recalled**: *0*, *1*, *0*, *1*, *0* and *1*
+- **ftq_series_id**:
+  *sid_removed_baselineYear1Arm1_ABCD-MID-fMRI_20161213165238*,
+  *sid_removed_baselineYear1Arm1_ABCD-MID-fMRI_20161213170251*,
+  *sid_removed_baselineYear1Arm1_ABCD-MID-fMRI_20161213170251*,
+  *sid_removed_baselineYear1Arm1_ABCD-SST-fMRI_20161213171252*,
+  *sid_removed_baselineYear1Arm1_ABCD-SST-fMRI_20161213171252* and
+  *sid_removed_2YearFollowUpYArm1_ABCD-T1_20181221131833*
+- **ftq_usable**: *1*, *0*, *1*, *0*, *1* and *0*
+- **ftq_notes**: *NA*, *NA*, *NA*, *NA*, *NA* and *NA*
+- **file_source**:
+  *s3://NDAR_Central_1/submission_13124/sid_removed_baselineYear1Arm1_ABCD-MID-fMRI_20161213165238.tgz*,
+  *s3://NDAR_Central_2/submission_16925/sid_removed_baselineYear1Arm1_ABCD-MID-fMRI_20161213170251.tgz*,
+  *s3://NDAR_Central_4/submission_31575/sid_removed_baselineYear1Arm1_ABCD-MID-fMRI_20161213170251.tgz*,
+  *s3://NDAR_Central_2/submission_16925/sid_removed_baselineYear1Arm1_ABCD-SST-fMRI_20161213171252.tgz*,
+  *s3://NDAR_Central_4/submission_31575/sid_removed_baselineYear1Arm1_ABCD-SST-fMRI_20161213171252.tgz*
+  and
+  *s3://NDAR_Central_3/submission_21142/sid_removed_2YearFollowUpYArm1_ABCD-T1_20181221131833.tgz*
 
-Table continues below
-
-|                         ftq_series_id                          | ftq_usable |
-|:--------------------------------------------------------------:|:----------:|
-| ***REMOVED***_baselineYear1Arm1_ABCD-MID-fMRI_20161213165238 |     1      |
-| ***REMOVED***_baselineYear1Arm1_ABCD-MID-fMRI_20161213170251 |     0      |
-| ***REMOVED***_baselineYear1Arm1_ABCD-MID-fMRI_20161213170251 |     1      |
-| ***REMOVED***_baselineYear1Arm1_ABCD-SST-fMRI_20161213171252 |     0      |
-| ***REMOVED***_baselineYear1Arm1_ABCD-SST-fMRI_20161213171252 |     1      |
-|   ***REMOVED***_2YearFollowUpYArm1_ABCD-T1_20181221131833    |     0      |
-
-Table continues below
-
-| ftq_notes |
-|:---------:|
-|    NA     |
-|    NA     |
-|    NA     |
-|    NA     |
-|    NA     |
-|    NA     |
-
-Table continues below
-
-|                                               file_source                                               |
-|:-------------------------------------------------------------------------------------------------------:|
-| s3://NDAR_Central_1/submission_13124/***REMOVED***_baselineYear1Arm1_ABCD-MID-fMRI_20161213165238.tgz |
-| s3://NDAR_Central_2/submission_16925/***REMOVED***_baselineYear1Arm1_ABCD-MID-fMRI_20161213170251.tgz |
-| s3://NDAR_Central_4/submission_31575/***REMOVED***_baselineYear1Arm1_ABCD-MID-fMRI_20161213170251.tgz |
-| s3://NDAR_Central_2/submission_16925/***REMOVED***_baselineYear1Arm1_ABCD-SST-fMRI_20161213171252.tgz |
-| s3://NDAR_Central_4/submission_31575/***REMOVED***_baselineYear1Arm1_ABCD-SST-fMRI_20161213171252.tgz |
-|   s3://NDAR_Central_3/submission_21142/***REMOVED***_2YearFollowUpYArm1_ABCD-T1_20181221131833.tgz    |
+<!-- end of list -->
 
 Now we filter for baseline images and exclude recalled images (these
 have either been replaced or had consent withdrawn, and are not
@@ -185,43 +189,23 @@ dwndabledf<-fastqc %>%
     ## `.groups` argument.
 
 ``` r
-dwndabledf <- dwndabledf %>% mutate(across(where(is.numeric),replace_na,0))
+dwndabledf <- dwndabledf %>% mutate(across(where(is.numeric),\(x) replace_na(x,0)))
 ```
-
-    ## Warning: There was 1 warning in `mutate()`.
-    ## ℹ In argument: `across(where(is.numeric), replace_na, 0)`.
-    ## ℹ In group 1: `subjectkey = "***REMOVED***"`.
-    ## Caused by warning:
-    ## ! The `...` argument of `across()` is deprecated as of dplyr 1.1.0.
-    ## Supply arguments directly to `.fns` through an anonymous function instead.
-    ## 
-    ##   # Previously
-    ##   across(a:b, mean, na.rm = TRUE)
-    ## 
-    ##   # Now
-    ##   across(a:b, \(x) mean(x, na.rm = TRUE))
 
 This yields, e.g.:
 
-|   subjectkey    | fMRI-FM-AP | fMRI-FM-PA | rsfMRI | T1  | T1-NORM | T2  |
-|:---------------:|:----------:|:----------:|:------:|:---:|:-------:|:---:|
-| ***REMOVED*** |     5      |     5      |   4    |  1  |    1    |  1  |
-| ***REMOVED*** |     0      |     0      |   4    |  1  |    0    |  1  |
-| ***REMOVED*** |     0      |     0      |   4    |  1  |    0    |  1  |
-| ***REMOVED*** |     5      |     5      |   4    |  1  |    1    |  1  |
-| ***REMOVED*** |     5      |     5      |   4    |  1  |    1    |  1  |
-| ***REMOVED*** |     6      |     6      |   4    |  1  |    1    |  1  |
+- **subjectkey**: *sid_removed*, *sid_removed*, *sid_removed*,
+  *sid_removed*, *sid_removed* and *sid_removed*
+- **fMRI-FM-AP**: *5*, *0*, *0*, *5*, *5* and *6*
+- **fMRI-FM-PA**: *5*, *0*, *0*, *5*, *5* and *6*
+- **rsfMRI**: *4*, *4*, *4*, *4*, *4* and *4*
+- **T1**: *1*, *1*, *1*, *1*, *1* and *1*
+- **T1-NORM**: *1*, *0*, *0*, *1*, *1* and *1*
+- **T2**: *1*, *1*, *1*, *1*, *1* and *1*
+- **T2-NORM**: *1*, *0*, *0*, *1*, *1* and *1*
+- **fMRI-FM**: *0*, *5*, *5*, *0*, *0* and *0*
 
-Table continues below
-
-| T2-NORM | fMRI-FM |
-|:-------:|:-------:|
-|    1    |    0    |
-|    0    |    5    |
-|    0    |    5    |
-|    1    |    0    |
-|    1    |    0    |
-|    1    |    0    |
+<!-- end of list -->
 
 Participants with useable data will have a useable framemap, rs-fmri
 image, and T1. Here we construct a variable based on whether the user
@@ -239,7 +223,7 @@ useabledf<-fastqc %>%
     ## `.groups` argument.
 
 ``` r
-useabledf <- useabledf %>% mutate(across(where(is.numeric),replace_na,0))
+useabledf <- useabledf %>% mutate(across(where(is.numeric),\(x) replace_na(x,0)))
 
 useabledf$T1ok<- (useabledf$T1 + useabledf$`T1-NORM`)>0
 
@@ -255,7 +239,7 @@ useabledf$fmok<- (useabledf$`fMRI-FM`>0) | (useabledf$`fMRI-FM-AP` > 0 & (useabl
 
 useabledf <- useabledf %>% 
   mutate(fastqcok = T1ok & rsfmriok & fmok) %>% 
-        mutate(across(ends_with("ok"),replace_na,FALSE))
+        mutate(across(ends_with("ok"),\(x) replace_na(x,FALSE)))
 ```
 
 # Inclusion Table

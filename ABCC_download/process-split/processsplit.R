@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 splitnum = commandArgs(trailingOnly=TRUE)[1]
-#splitnum='split000'
+#splitnum='abccsplit110'
 
 print(paste('R Processing Part 1:',splitnum))
 
@@ -14,25 +14,25 @@ basepath=path.expand("./abccbids/fmriresults01/derivatives/abcd-hcp-pipeline/")
 library(tidyverse); library(ggthemes); theme_set(theme_tufte())
 
 # Single file paths for testing
-#matpath=path.expand("./raw/abccbids/fmriresults01/derivatives/abcd-hcp-pipeline/sub-***REMOVED***/ses-baselineYear1Arm1/func")
-#matfile=file.path(matpath,"sub-***REMOVED***_ses-baselineYear1Arm1_task-rest_desc-filtered_motion_mask.mat")
+#matpath=path.expand("./raw/abccbids/fmriresults01/derivatives/abcd-hcp-pipeline/sub-NDARINV<REMOVED>/ses-baselineYear1Arm1/func")
+#matfile=file.path(matpath,"sub-NDARINV<REMOVED>_ses-baselineYear1Arm1_task-rest_desc-filtered_motion_mask.mat")
 
 # Each .mat file appears in R as a 1x51 matrix of lists. Each list item
 # corresponds to one threshold and has child objects describing the number
 # of seconds remaining, as well as the masked connectivity matrix at .3mm.
 
 extract_seconds<-function(filename) {
-  targetthresholds=c(11,21,31,41,51) #.1, .2, .3, .4, and .5mm
+  targetthresholds=c(1:51) #.00 to .50 in .01 mm increments
   matdataraw<-R.matlab::readMat(filename)$motion.data[1,targetthresholds]
   mat<-lapply(matdataraw,function(i) {
-    unlist(i[[1]][c(3,8,9)])
+    unlist(i[[1]][c(3,7,8,9)])
   })
 
   sname=substr(basename(filename),5,19)
   df<-as.data.frame(do.call(rbind,mat))
-  names(df)<-c("mmthresh","s_remaining","filtered_fd")
+  names(df)<-c("mmthresh","gframes","s_remaining","filtered_fd")
   df$sname<-sname
-  df[,c(4,1,2,3)]
+  df[,c("sname","mmthresh","gframes","s_remaining","filtered_fd")]
 }
 # extract_seconds(matfile)
 
@@ -43,39 +43,9 @@ rseconds_long<-do.call(rbind,rseconds_list)
 rseconds_wide<-rseconds_long %>%
   mutate(ltfiveminutes=s_remaining<5*60) %>%
   pivot_wider(names_from=mmthresh,
-              values_from=c(s_remaining,ltfiveminutes,filtered_fd))
+              values_from=c(s_remaining,ltfiveminutes,gframes,filtered_fd))
 
-## We want to extract the motion mask for each participant at each threshold.
-## This is so we can calculate:
-## a) a connectivity matrix for each participant to build in to the hexbin
-## objects
-## b) a template connectivity matrix as a validity test.
-
-write_masks<-function(filename) {
-  targetthresholds=c(11,21,31,41,51) #.1, .2, .3, .4, and .5mm
-  matdataraw<-R.matlab::readMat(filename)$motion.data[1,targetthresholds]
-  mat<-lapply(matdataraw,function(i) {
-    unlist(i[[1]][4])
-  })
-  sid=stringr::str_extract(filename,'NDARINV[A-Z0-9]{8}')
-  gframes=list()
-  for (i in 1:5) {
-    maskvector=+(mat[[i]] == 0)
-    maskname=paste0("./tmp/",sid,"_t",i,"_maskV.txt")
-    #This gets written by workbench
-    #message(paste("Writing",maskname))
-    #data.table::fwrite(list(maskvector),maskname)
-    gframes[i]<-sum(maskvector)
-  }
-  names(gframes)<-c('gframe1','gframe2','gframe3','gframe4','gframe5')
-  gframes$sname<-sid
-  as.data.frame(gframes)
-}
-
-masks_list<-lapply(matfiles,write_masks)
-masks_df<-do.call(rbind,masks_list)
-
-sdata<-full_join(rseconds_wide,masks_df)
+sdata<-rseconds_wide
 
 # Get data from python script
 dflong<-read.csv("tmp/AllFD",na.strings="999")
@@ -85,17 +55,3 @@ names(FDdata)[1]<-"sname"
 
 sdata2<-full_join(sdata,FDdata)
 saveRDS(sdata2,paste0(splitnum,"/",splitnum,".subjectdata.RDS"))
-
-## Now we want aggregated information for this split, specifically:
-##  * A couple of random participant connectivity plots, sorted by network: this
-##    is to check that the matrix in the .mat file is in the order we expect.
-##  * A list of 5 hexplot objects describing motion x correlation pairs.
-
-# This is the matrix of distances between ROIs in the Glasser Parcellation:
-#library(reticulate)
-#np <- import("numpy")
-# data reading
-#distmat <- np$load("../GlasserDistances/glasserdistances.npy")
-#glasserlabels<- np$load("../GlasserDistances/glasser_labels.npy")
-#glassernetworks<-np$load("../GlasserDistances/glasser_networks.npy")
-
