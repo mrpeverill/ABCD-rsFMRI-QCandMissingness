@@ -130,7 +130,7 @@ df$household.income<-relevel(df$household.income,5)
 
 ## Descriptives
 
-### Figure 1 Table 1: Inclusion counts and inconsistencies
+### Figure 1: Condition Descriptions, inclusion counts, and inconsistencies
 
 
 ```{r}
@@ -251,22 +251,6 @@ ggsave("Manuscript/Figures/inclusioncounts.svg",
 ```
 
 (panel A is added using a vector graphics program.)
-
-Table 1:
-
-```{r}
-tables.xlsx<-openxlsx::createWorkbook()
-levelstablehux<-as_hux(levelsdf[,1:2]) %>% 
-  theme_basic() %>%
-  set_font_size(10) %>%
-  set_width(1.8) %>%
-  set_col_width(c(.25,.5,.25)) %>%
-  set_background_color(NA)
-tables.xlsx<-as_Workbook(levelstablehux,
-                     Workbook=tables.xlsx,
-                     sheet="LevelsTable")
-```
-
 
 ### Categorical Variable Figure (Figure 2)
 
@@ -528,7 +512,7 @@ We describe trauma count statistics in our methods:
 
 `r table(df$ksads_factor)`
 
-## Table: Associations of behavioral data with framewise displacement (Table 2 and 3)
+## Table: Associations of behavioral data with framewise displacement (Table 1 and 2)
 
 ```{r}
 ccor<-df %>% select("adi.z",
@@ -649,7 +633,7 @@ discOut %>%
 ```
 
 
-## Bivariate Models and Table 4
+## Bivariate Models and Table
 
 ```{r}
 ORformat<-\(x) {DescTools::Format(exp(x),digits=2,ldigits=0)}
@@ -797,6 +781,7 @@ bvhux <- as_hux(bvtable) %>%
   insert_row(c("Variable", rep(c("OR\n[90% CI]\np"), 8)), after = 0) %>%
   insert_row(c("", "T", "C", ".5", ".4", ".3", "R", ".2", ".1"))
 
+tables.xlsx<-openxlsx::createWorkbook()
 tables.xlsx<-as_Workbook(bvhux[1:20,],
                      Workbook=tables.xlsx,
                      sheet="bvmPage1")
@@ -887,7 +872,7 @@ model.1mm.results <-
   cbind(model.1mm.results, pcorrect(coef(summary(model.1mm))[, 4]))
 ```
 
-### Adjusted Model Tables (Table 5)
+### Adjusted Model Tables
 
 ```{r}
 Mformat<-\(m) {
@@ -2533,7 +2518,7 @@ The following changes were made to the analysis plan post-registration:
 * BMI was added as a study variable, to enhance comparibility with Cosgrove et. al. (2020) and reflect the known relation between BMI and in-scanner motion.
 * The Behavioral Inhibition scale was removed. It is not available in the ABCD baseline data and was included in error.
 * More data was excluded prior to motion filtering than expected and there were more differences in inclusion criteria between ABCD versions than expected. Consequently, three 'QC' conditions were added in addition to the motion thresholds, to provide additional detail to inform study design.
-* The originally planned approach to evaluate H2 was found to be infeasible (See 'H2 Model,' above). In practice, a visual inspection of the data did not support H2 (see H2 Marginal Means Plotting). Specifically, because so much data was missing, biases in the missing data were self-correcting as more data was excluded. I.e., in the event that males were more likely to be excluded than females (which appears to be true in this dataset), the bias is strongest as data is first excluded from the dataset. Once a significantly larger proportion of males have been excluded than females, the over-representation of females in the sample results in their being more likely to be excluded. At the extreme, when all of the data is excluded, there is no bias. This is reflected in our marginal means plots).
+* The originally planned approach to evaluate H2 was found to be infeasible (See 'H2 Model,' above). In practice, a visual inspection of the data did not support H2 (see H2 Marginal Means Plotting). Specifically, because so much data was missing, biases in the missing data were self-correcting as more data was excluded. I.e., in the event that males were more likely to be excluded than females (which appears to be true in this dataset), the bias is strongest as data is first excluded from the dataset. Once a significantly larger proportion of males have been excluded than females, the over-representation of females in the sample results in their being more likely to be excluded. At the extreme, when all of the data is excluded, there is no bias).
 
 Here, we present the analyses originally proposed as written, excepting H2. Specifically, we present results from adjusted models without the BMI variable in the motion scrubbing conditions.
 
