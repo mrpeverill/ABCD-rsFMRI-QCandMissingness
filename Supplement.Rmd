@@ -21,7 +21,46 @@ header-includes:
   
 # Supplemental Methods
 
-This section includes R code used to generate tables, figures, and statistics used in the main manuscript. Additional code (specifically, for pre-processing and coding the raw data) is available on osf: https://osf.io/57xer/.
+## Behavioral and Demographic Variables Detailed Information.
+
+### Neighborhood Factors
+
+Area Deprivation Index (ADI) is a composite measure of a neighborhood’s relative socioeconomic disadvantage as compared to other US neighborhoods (Singh, 2003). ADI has shown interactive effects with individual SES measures in predicting rs-fMRI functional connectivity in the ABCD dataset (Rakesh et al., 2021). The Child Opportunity Index (v2.0; COI2) is a composite index derived from census data that indexes neighborhood resources and conditions relevant to children’s development, inclusive of educational opportunities, health-affecting and environmental factors, and social and economic resources (Fan et al., 2021). When participants listed multiple residences, averages of these neighborhood factors were calculated and weighted according to time in residence.
+
+### Trauma and Stress Exposure. 
+
+Youth exposure to DSM-5 PTSD criterion-A eligible traumatic experiences, as measured by the parent-report Kiddie Schedule for Affective Disorders and Schizophrenia (KSADS; Townsend et al., 2020), was used as an index of traumatic stress exposure. We coded trauma exposure categorically as unexposed, single exposure, or multiple (two or more) exposures. This approach, when employed with a nationally representative sample of adolescents aged 13-17, roughly divided sample into tertiles for exposure severity (McLaughlin et al., 2013). This approach allows for specific examination of missingness among multiply exposed youth, who show especially high risk for PTSD (McLaughlin et al., 2013) and other adverse outcomes (Evans & Kim, 2010), and does so without dividing the sample into undersized sub-groups.
+
+### Participant Demographics. 
+
+Participant demographic variables included total family income, highest parental education, race/ethnicity, and sex assigned at birth. Income was re-leveled from ten income ranges to eight to allow for larger subject counts within each range (see Heeringa & Berglund, 2020). Caregiver education was similarly re-leveled from twenty-one levels to five; we expected minimal variation in exclusions within these five bins given findings from previous work with ABCD (Cosgrove et al., 2022). We used U.S. Census derived race/ethnicity categories included in ABCD to facilitate comparisons with existing literature (e.g., Cosgrove et al., 2022; Fadus et al., 2021; Heeringa & Berglund, 2020); notably, however, this approach may under-represent important U.S. sub-populations (Saragosa-Harris et al., 2022). Secondary analyses using the fully expanded variables are included in supplemental materials.
+
+
+### Pubertal Development. 
+
+We include pubertal development category scores (pre/early/mid/late/post-pubertal) derived from the Pubertal Development Scale (PDS; Petersen et al., 1988). We used the caregiver reported scores, as they may be more accurate in the age range (9-10 years) of the ABCD baseline sample (Cheng et al., 2021), but substituted child reported scores where caregiver reports were missing.
+
+### Psychopathology. 
+
+In order to separately examine the impact of general, internalizing, and externalizing psychopathology, we calculated a generalized psychopathology factor (P), as well as residual internalizing and externalizing factors, by fitting a bifactor model to the 8 subscales of the Child Behavior Checklist (CBCL; Achenbach et al., 2002; Brislin et al., 2021; D. A. Clark et al., 2021). The model showed acceptable fit to the data (χ² = 1338.249, df = 15, p < 0.001, RMSEA = 0.086, CFI = 0.973, TLI = 0.949, SRMR = 0.028). P-factor scores derived from the model were strongly correlated (r=.87) with the Total Problems subscale of the CBCL. 
+
+### General Cognitive Ability. 
+
+Cognitive ability was operationalized using the matrix reasoning task scaled score from the WISC-V as well as the cognition composite and crystalized intelligence composite scores captured by the NIH Toolbox (Akshoomoff et al., 2013; Thompson et al., 2019). Extant research affirms the reliability and validity of each measure in youth samples (Akshoomoff et al., 2013; Canivez et al., 2020; Thompson et al., 2019).
+
+### Inhibitory Control. 
+
+The NIH Toolbox Flanker Inhibitory Control task score (Weintraub et al., 2013) was included as a behavioral measure of inhibitory control. Scores on this task have been correlated with both parent reported hyperactivity and activity as measured by actigraphy in children with ADHD (Burley et al., 2022). 
+
+# Code Supplement
+
+This section includes R code used to generate all tables, figures, and statistics used in the main manuscript. Code is visible in the original Rmd document available (together with additional pre-processing code) on osf: https://osf.io/57xer/. The headings are hidden from the rendered document for legibility.
+
+```{=latex}
+% this will comment until \fi is called at the end of the code supplement.
+\iffalse
+```
+
        
 ```{r setup, include=FALSE}
 library(tidyverse); library(ggthemes)
@@ -43,7 +82,7 @@ requireNamespace("DescTools")
 requireNamespace("sdlabFunctions") # https://github.com/mrpeverill/sdlabFunctions
 requireNamespace("performance")
 requireNamespace("parameters")
-knitr::opts_chunk$set(echo = TRUE,warning = FALSE,message = FALSE,dev = "cairo_pdf")
+knitr::opts_chunk$set(echo = FALSE,warning = FALSE,message = FALSE,dev = "cairo_pdf")
 theme_set(theme_tufte(base_family = "Times New Roman"))
 extrafont::loadfonts(quiet = TRUE)
 huxtable::set_default_properties(latex_float="htbp")
@@ -610,35 +649,11 @@ write.csv(contOut,"Manuscript/Tables/FDcorr_continuousDVs.csv",row.names=FALSE)
 write.csv(discOut,"Manuscript/Tables/FDcorr_discreteDVs.csv",row.names=FALSE)
 ```
 
-In the manuscript, F tests associated with the discrete variables tested are omitted for brevity. These are printed here:
-
-```{r}
-discOut %>% 
-  filter(IV %in% c("filtered_fd_0.1","filtered_fd_0.2","filtered_fd_0.3")) %>% 
-  select(DV:MODEL_P) %>% 
-  distinct() %>% 
-  as_hux() %>% 
-  insert_column(c("Threshold",rep(c(".1mm",".2mm",".3mm"),each=6))) %>% 
-  set_caption("F tests for relation of discrete DVs with FD after scrubbing, by threshold (pt. 1)")
-```
-
-```{r}
-discOut %>% 
-  filter(IV %in% c("filtered_fd_0.4","filtered_fd_0.5")) %>% 
-  select(DV:MODEL_P) %>% 
-  distinct() %>% 
-  as_hux() %>% 
-  insert_column(c("Threshold",rep(c(".4mm",".5mm"),each=6))) %>% 
-  set_caption("F tests for relation of discrete DVs with FD after scrubbing, by threshold (pt. 2)")
-```
-
-
 ## Bivariate Models and Table
 
 ```{r}
 ORformat<-\(x) {DescTools::Format(exp(x),digits=2,ldigits=0)}
 pformat<-\(x) {DescTools::Format(x,digits=3,ldigits=0,sci=30)}
-
 
 varstring <-
   c(
@@ -1081,201 +1096,6 @@ model.QC2.site.results<-cbind(model.QC2.site.results,p.adjust(coef(summary(model
 
 ```
 
-#### Supplementary Tables
-
-This is a table of the model output for just the scanner terms, with and without site control, which we reference in the text:
-
-```{r}
-MformatCI <- \(m) {
-  stars <- sdlabFunctions::starPs(m[, 4])
-  cbind(
-    paste0(
-      ORformat(m[, 2]),
-      stars,
-      " [",
-      ORformat(m[, 1]),
-      "–",
-      ORformat(m[, 3]),
-      "]"))
-}
-
-sitecoefs<-rbind(cbind(MformatCI(model.ABCC.scanner.results)[33:36,],
-      MformatCI(model.QC2.scanner.results)[33:36,],
-      MformatCI(model.2mm.scanner.results)[33:36,]),
-      cbind(MformatCI(model.ABCC.scanner.site.results)[33:36,],
-      MformatCI(model.QC2.scanner.site.results)[33:36,],
-      MformatCI(model.2mm.scanner.site.results)[33:36,]))
-
-as_huxtable(sitecoefs) %>%
-  insert_row(c("ABCC", "QC2", ".2mm")) %>%
-  insert_row(c("Without Site Control", "", "")) %>%
-  merge_cells(1, 1:3) %>%
-  merge_cells(2, 1:3) %>%
-  insert_row(c("With Site Control","",""),after = 6) %>% 
-  merge_cells(7,1:3) %>% 
-  insert_column(
-    c(
-      "",
-      "Scanner (ref: Philips Achieva)",
-      "GE Discovery MR750",
-      "Philips Ingenia",
-      "Siemens Prisma",
-      "Siemens Prisma fit",
-      "",
-      "GE Discovery MR750",
-      "Philips Ingenia",
-      "Siemens Prisma",
-      "Siemens Prisma fit"
-    )
-  ) %>%
-  set_caption("OR of scanner terms, with and without site control [95\\% CI]. ***: p<.001") %>% 
-  set_wrap(TRUE) %>% 
-  set_width(1)
-```
-
-#### Supplementary Forest Plots
-
-These forest plots show ORs with a significant (p<.05) model term in either the site-controlled or the site un-controlled adjusted model. They are here to visualize the effects of site control on the adjusted models.
-
-```{r fig.cap="Significant ORs predicting ABCC missingness with and without site control"}
-ABCC.compdf <- rbind(
-  model.ABCC.site.results %>%
-    as.data.frame() %>%
-    rownames_to_column("term") %>%
-    rename_with( ~ c("term", "lowCI", "OR", "highCI", "p")) %>%
-    mutate(
-      lowCI = replace_na(lowCI, min(lowCI, na.rm = TRUE)),
-      highCI = replace_na(highCI, max(highCI, na.rm = TRUE)),
-      sig = p < .05,
-      model = "Site Control"
-    ) %>%
-    mutate(across(lowCI:highCI, exp)),
-  model.ABCC.results %>%
-    as.data.frame() %>%
-    rownames_to_column("term") %>%
-    rename_with( ~ c("term", "lowCI", "OR", "highCI", "p")) %>%
-    mutate(
-      lowCI = replace_na(lowCI, min(lowCI, na.rm = TRUE)),
-      highCI = replace_na(highCI, max(highCI, na.rm = TRUE)),
-      sig = p < .05,
-      model = "No Control"
-    ) %>%
-    mutate(across(lowCI:highCI, exp))
-) %>%
-  mutate(model = as.factor(model),
-         alphaval=case_when(sig ~ 1,
-                            !sig ~ .5))
-
-
-#terms where one model coefficient was sig
-sigterms <-
-  (ABCC.compdf %>% group_by(term) %>% summarise(anysig = sum(sig) != 0) %>% filter(anysig))$term
-
-ABCC.compdf<-ABCC.compdf %>% mutate(alphaval=factor(alphaval,levels=c(.5,1),labels=c("p>.05","p<.05")))
-
-test<-ggplot(ABCC.compdf %>% filter(term %in% sigterms),
-       aes(x = term, color = model, alpha = alphaval)) +
-  geom_point(aes(y = OR), position = position_dodge(.2)) +
-  geom_linerange(aes(ymin = lowCI, ymax = highCI, x = term),
-                 position = position_dodge(.2)) +
-  ylim(-4, 4) +
-  geom_hline(lty = 2, aes(yintercept = 1), colour = 'black') +
-  coord_flip() + theme(legend.title = element_blank())
-```
-
-
-```{r fig.cap="Significant ORs predicting DAIRC Recommended missingness with and without site control"}
-QC2.compdf <- rbind(
-  model.QC2.site.results %>%
-    as.data.frame() %>%
-    rownames_to_column("term") %>%
-    rename_with( ~ c("term", "lowCI", "OR", "highCI", "p")) %>%
-    mutate(
-      lowCI = replace_na(lowCI, min(lowCI, na.rm = TRUE)),
-      highCI = replace_na(highCI, max(highCI, na.rm = TRUE)),
-      sig = p < .05,
-      model = "Site Control"
-    ) %>%
-    mutate(across(lowCI:highCI, exp)),
-  model.QC2.results %>%
-    as.data.frame() %>%
-    rownames_to_column("term") %>%
-    rename_with( ~ c("term", "lowCI", "OR", "highCI", "p")) %>%
-    mutate(
-      lowCI = replace_na(lowCI, min(lowCI, na.rm = TRUE)),
-      highCI = replace_na(highCI, max(highCI, na.rm = TRUE)),
-      sig = p < .05,
-      model = "No Control"
-    ) %>%
-    mutate(across(lowCI:highCI, exp))
-) %>%
-  mutate(model = as.factor(model),
-         alphaval=case_when(sig ~ 1,
-                            !sig ~ .5))
-
-#terms where one model coefficient was sig
-sigterms<-(QC2.compdf %>% group_by(term) %>% summarise(anysig=sum(sig)!=0) %>% filter(anysig))$term
-
-QC2.compdf<-QC2.compdf %>% mutate(alphaval=factor(alphaval,levels=c(.5,1),labels=c("p>.05","p<.05")))
-
-ggplot(QC2.compdf %>% filter(term %in% sigterms),
-       aes(x = term, color = model, alpha = alphaval)) +
-  geom_point(aes(y = OR), position = position_dodge(.2)) +
-  geom_linerange(aes(ymin = lowCI, ymax = highCI, x = term),
-                 position = position_dodge(.2)) +
-  ylim(-4, 4) +
-  geom_hline(lty = 2, aes(yintercept = 1), colour = 'black') +
-  coord_flip() + theme(legend.title = element_blank())
-
-```
-
-```{r fig.cap="Significant ORs predicting .2mm missingness with and without site control"}
-twomm.compdf <- rbind(
-  model.2mm.site.results %>%
-    as.data.frame() %>%
-    rownames_to_column("term") %>%
-    rename_with( ~ c("term", "lowCI", "OR", "highCI", "p")) %>%
-    mutate(
-      lowCI = replace_na(lowCI, min(lowCI, na.rm = TRUE)),
-      highCI = replace_na(highCI, max(highCI, na.rm = TRUE)),
-      sig = p < .05,
-      model = "Site Control"
-    ) %>%
-    mutate(across(lowCI:highCI, exp)),
-  model.2mm.results %>%
-    as.data.frame() %>%
-    rownames_to_column("term") %>%
-    rename_with( ~ c("term", "lowCI", "OR", "highCI", "p")) %>%
-    mutate(
-      lowCI = replace_na(lowCI, min(lowCI, na.rm = TRUE)),
-      highCI = replace_na(highCI, max(highCI, na.rm = TRUE)),
-      sig = p < .05,
-      model = "No Control"
-    ) %>%
-    mutate(across(lowCI:highCI, exp))
-) %>%
-  mutate(model = as.factor(model),
-         alphaval=case_when(sig ~ 1,
-                            !sig ~ .5))
-
-
-#terms where one model coefficient was sig
-sigterms <-
-  (twomm.compdf %>% group_by(term) %>% summarise(anysig = sum(sig) != 0) %>% filter(anysig))$term
-
-twomm.compdf<-twomm.compdf %>% mutate(alphaval=factor(alphaval,levels=c(.5,1),labels=c("p>.05","p<.05")))
-
-ggplot(twomm.compdf %>% filter(term %in% sigterms),
-       aes(x = term, color = model, alpha = alphaval)) +
-  geom_point(aes(y = OR), position = position_dodge(.2)) +
-  geom_linerange(aes(ymin = lowCI, ymax = highCI, x = term),
-                 position = position_dodge(.2)) +
-  ylim(-4, 4) +
-  geom_hline(lty = 2, aes(yintercept = 1), colour = 'black') +
-  coord_flip() + theme(legend.title = element_blank())
-
-```
-
 #### Figure 4: Missingness by site, inclusion criteria
 
 ```{r fig.cap="% Missing by site, inclusion criteria",fig.height=4,fig.width=10}
@@ -1346,22 +1166,6 @@ sensplot1<-ggplot(sitesummary2,
   ggtitle("% Missing by site, inclusion criteria")
 
 ```
-We reference the sites with the highest % exclusion, by site, in the text -- they are given by this table.
-
-```{r}
-sitesummary2 %>%  
-  group_by(sample) %>% 
-  filter(Percent_Missing == max(Percent_Missing)) %>%
-  mutate(Percent_Missing = Percent_Missing*100) %>% 
-  select(sitelabel:Percent_Missing) %>% 
-  rename("Site"="sitelabel",
-         "Condition"="sample",
-         "% Excluded"="Percent_Missing") %>% 
-  as_hux() %>% 
-  set_caption("Sites with Highest \\% Excluded, by Condition")
-  
-```
-
 
 ```{r fig.cap="N Missing in ABCC by site, race/ethnicity",fig.height=4,fig.width=10}
 sitesummary3 <- df %>% group_by(site_id_l,race_ethnicity.factor) %>%
@@ -1417,7 +1221,7 @@ sensplot3<-ggplot(sitesummary3,
   ylab("N") +
   scale_x_discrete(guide = guide_axis(angle = 45)) +
   scale_fill_viridis(discrete=TRUE) +
-  ggtitle("N in ABCC by site, race/ethnicity")
+  ggtitle("N included in ABCC by site, race/ethnicity")
 
 ```
 
@@ -1426,19 +1230,13 @@ sensplot3<-ggplot(sitesummary3,
 ggsave("Manuscript/Figures/sensplot.svg",(sensplot1 / sensplot2 / sensplot3),height=9,width=7.5)
 ```
 
-## H2 Model
-
-This model specifically looks at changes associated with motion threshold choice in the ABCC data. In the pre-registration, we originally proposed a mixed effects logistic model where each participant had a case for each motion threshold, and the percentage of data missing from each threshold was used as a within-subject variable. In simulation, we discovered a number of problems with this approach:
-
-1. The proposed mixed effects logistic regression created very poor predictions and model fits in simulation, and often did not converge. A linear model of probability proved more stable and accurate and we determined to use that approach (a logistic model is also presented below, but it is similarly flawed).
-2. We proposed that an interaction between a variable and the 'pmiss' variable would indicate that bias was worsening as more data was excluded. However, in simulating this approach we discovered that in the case that there was a bias but it did not worsen as more data was excluded, as, for example, if 2 males were excluded for every female, this would surface as a linear interaction between pmiss and sex in the model. Instead, a worsening bias would be indicated by an interaction between a variable and a polynomial of pmiss, which would indicate a curvilinear trajectory.
-
-(notes from the simulation are available on osf)
-
-An important remaining question from the simulation study was whether to include an intercept and main effects in the model. As, at pmiss=0, the probability of exclusion ought to be 0 for everyone, one could argue the intercept should be omitted. We will try both methods and compare model fit.
+## Trends Across Conditions
+See 'Supplementary Results' for discussion of the formal model.
 
 ```{r}
-#Wide > Long using all the thresholds.
+# A 'long' format dataframe with thresholds within participants is used for these
+# plots
+
 pmisssum <- df %>% summarise(across(c(any_rest,
                                       ends_with("_375")),
                                     ~mean(!.))) %>% 
@@ -1451,222 +1249,21 @@ dflong <- df %>%
   mutate(missing=!missing)
 
 dflong$pmiss<-pmisssum[dflong$threshold]
-
-# h2 model with intercepts.
-m.h2 <- lmer(
-  missing ~ poly(pmiss, 2) +
-    sex + sex:poly(pmiss, 2) +
-    household.income + household.income:poly(pmiss, 2) +
-    p.edu + p.edu:poly(pmiss, 2) +
-    race_ethnicity.factor + race_ethnicity.factor:poly(pmiss, 2) +
-    ksads_factor + ksads_factor:poly(pmiss, 2) +
-    pds_category + pds_category:poly(pmiss, 2) +
-    adi.z + adi.z:poly(pmiss, 2) +
-    coi.z + coi.z:poly(pmiss, 2) +
-    nihtbx_flanker_agecorrected.z + nihtbx_flanker_agecorrected.z:poly(pmiss, 2) +
-    nihtbx_cryst_agecorrected.z + nihtbx_cryst_agecorrected.z:poly(pmiss, 2) +
-    nihtbx_totalcomp_agecorrected.z + nihtbx_totalcomp_agecorrected.z:poly(pmiss, 2) +
-    pea_wiscv_tss.z + pea_wiscv_tss.z:poly(pmiss, 2) +
-    pfactor.z + pfactor.z:poly(pmiss, 2) +
-    INT.z + INT.z:poly(pmiss, 2) +
-    EXT.z + EXT.z:poly(pmiss, 2) +
-    interview_age.z + interview_age.z:poly(pmiss, 2) +
-    bmiAgeZ + bmiAgeZ:poly(pmiss, 2) +
-    (pmiss | subjectkey),
-  data = dflong
-)
-
-# h2 model with intercepts removed
-m.h2.stripped <- lmer(
-  missing ~ pmiss + poly(pmiss, 2) +
-    sex:poly(pmiss,2) +
-    household.income:poly(pmiss,2) +
-    p.edu:poly(pmiss,2) +
-    race_ethnicity.factor:poly(pmiss,2) +
-    ksads_factor:poly(pmiss,2) +
-    pds_category:poly(pmiss,2) +
-    adi.z:poly(pmiss,2) +
-    coi.z:poly(pmiss,2) +
-    nihtbx_flanker_agecorrected.z:poly(pmiss,2) +
-    nihtbx_cryst_agecorrected.z:poly(pmiss,2) +
-    nihtbx_totalcomp_agecorrected.z:poly(pmiss,2) +
-    pea_wiscv_tss.z:poly(pmiss,2) +
-    pfactor.z:poly(pmiss,2) +
-    INT.z:poly(pmiss,2) +
-    EXT.z:poly(pmiss,2) +
-    interview_age.z:poly(pmiss,2) +
-    bmiAgeZ:poly(pmiss,2) +
-    + 0 +
-    (pmiss + 0 | subjectkey),
-  data = dflong
-)
-
-# h2 model as a glm - this does not converge
-# m.h2.glm<- glmer(
-#   missing ~ poly(pmiss, 2) +
-#     sex + sex:poly(pmiss, 2) +
-#     household.income + household.income:poly(pmiss, 2) +
-#     p.edu + p.edu:poly(pmiss, 2) +
-#     race_ethnicity.factor + race_ethnicity.factor:poly(pmiss, 2) +
-#     ksads_factor + ksads_factor:poly(pmiss, 2) +
-#     pds_category + pds_category:poly(pmiss, 2) +
-#     adi.z + adi.z:poly(pmiss, 2) +
-#     coi.z + coi.z:poly(pmiss, 2) +
-#     nihtbx_flanker_agecorrected.z + nihtbx_flanker_agecorrected.z:poly(pmiss, 2) +
-#     nihtbx_cryst_agecorrected.z + nihtbx_cryst_agecorrected.z:poly(pmiss, 2) +
-#     nihtbx_totalcomp_agecorrected.z + nihtbx_totalcomp_agecorrected.z:poly(pmiss, 2) +
-#     pea_wiscv_tss.z + pea_wiscv_tss.z:poly(pmiss, 2) +
-#     pfactor.z + pfactor.z:poly(pmiss, 2) +
-#     INT.z + INT.z:poly(pmiss, 2) +
-#     EXT.z + EXT.z:poly(pmiss, 2) +
-#     interview_age.z + interview_age.z:poly(pmiss, 2) +
-#     bmiAgeZ + bmiAgeZ:poly(pmiss, 2) +
-#     (pmiss | subjectkey),
-#   family="binomial",
-#   data = dflong,
-#   nAGQ=0,
-#   control=glmerControl(optimizer="nloptwrap")
-# )
-
-performance::print_md(performance::compare_performance(m.h2,m.h2.stripped))
 ```
 
-The 'full' model has superior fit characteristics across indices. The GLM model, which is closer to what we originally proposed, performs poorly. 
+### Condition trend plots plotting (Figure 5)
 
 ```{r}
-h2sum<-summary(m.h2)
-temp = capture.output(h2sum)
-End   = grep("Fixed effects", temp)-1
-print(unname(temp[0:End]))
-```
+# These functions draw plots with predicted probability of missingness 
+# (by group) - probability of missingness in the whole sample.
 
-Table for the fixed effects:
-
-```{r}
-pnames<-rownames(h2sum$coefficients)
-
-h2table<-h2sum$coefficients %>% as.data.frame() %>%
-  rownames_to_column(var = "Parameter") %>%
-  left_join(parameters::ci(m.h2)) %>%
-  mutate(star = sdlabFunctions::starPs(`Pr(>|t|)`)) %>%
-  select(c(Parameter, Estimate, CI_low, CI_high,star)) %>%
-  mutate(level=c(1:3,rep(1,31),rep(2:3,31)),
-         basep=c(rep("",3),pnames[4:34],rep(pnames[4:34],each=2))) %>%
-  pivot_wider(id_cols=basep,names_from=level,values_from = Estimate:star) %>%
-  mutate(across(where(is.numeric),ORformat))
-
-h2hux<-h2table[,c(1,2,5,8,11,3,6,9,12,4,7,10,13)] %>%
-  as_hux(add_colnames=FALSE) %>%
-  insert_row("","Intercept","","","","pmiss","","","","pmiss^2","","","") %>%
-  merge_cells(1, 2:5) %>% merge_cells(1, 6:9) %>% merge_cells(1, 10:12) %>%
-  insert_row("","Main Eff.","","","","Interaction","","","","Q.Interaction","","","",after=2) %>%
-  merge_cells(3, 2:5) %>% merge_cells(3, 6:9) %>% merge_cells(3, 10:12) %>%
-  insert_row("",rep(c("B","CI.l","CI.u","*"),3)) 
-
-h2hux[,1] <- c(rep("",4),alllevels[-1]) 
-
-h2hux <- h2hux %>% insert_row(
-    "Household Income (ref: $100-$200k)",
-    after = 6,
-    colspan = 9,
-    fill = ""
-  ) %>%
-  insert_row(
-    "Highest Parental Education (ref: College Degree)",
-    after = 11,
-    colspan = 9,
-    fill = ""
-  ) %>%
-  insert_row(
-    "Census Race/Ethnicity (ref: White)",
-    after = 13+3,
-    colspan = 9,
-    fill = ""
-  ) %>%
-  insert_row(
-    "KSADS Trauma Count (ref: 0 Exposures)",
-    after = 18+3,
-    colspan = 9,
-    fill = ""
-  ) %>%
-  insert_row(
-    "Pubertal Status (ref: pre-pubertal)",
-    after = 21+3,
-    colspan = 9,
-    fill = ""
-  )
-
-h2hux[c(1:4,5:24),] %>% set_caption("H2 / Omnibus model parameters, pt. 1")
-```
-
-```{r}
-h2hux[c(1:4,25:nrow(h2hux)),] %>% set_caption("H2 / Omnibus model parameters, pt. 2")
-
-```
-
-## H2 Marginal Means plotting (Figure 5)
-
-```{r}
-# What ticks do we want for our plot?
+# What ticks do we want for these plot?
 xticks.mm<-c(.5,.45,.4,.35,.3,.25,.2,.15,.1,.05)
 xticks.pmiss<-pmisssum[c("any_rest",paste0("gframes_",xticks.mm,"_375"))]
 xticks.perc<-round(xticks.pmiss*100,0)
 xticks.labela<-c("C",paste0(xticks.mm,"mm"))
 xticks.label<-paste0(xticks.labela,"\n(",xticks.perc,"%)")
 xticks.label[c(2:7)]<-""
-
-# These functions all draw a plot with predicted probability of missingness 
-# (by group) - probability of missingness in the whole sample.
-# 1 This one includes both model generated marginal means and simple mean 
-# inclusion.
-detrend_catemplot_model<-function(x,label,model=NULL) {
-  quosure<-quo(!!sym(x))
-  if(!is.null(model)) {
-  lmean <- emmeans(model,
-                   as.formula(paste("~",x,"| pmiss")),
-                     "pmiss",
-                     at = list(pmiss=xticks.pmiss,
-                               z=levels(df %>% 
-                                          group_by(!!quosure) %>%
-                                          filter(n() >= 50) %>% 
-                                          ungroup() %>% 
-                                          select(!!quosure) %>% 
-                                          unlist())),
-                   rg.limit = 400000)
-
-  plot.dat<-emmip(lmean,
-                  as.formula(paste(x,"~ pmiss")),
-                  CIs=TRUE,
-                  plotit = FALSE)
-  }
-  #Add detrended prediction
-  plot.dat$ydt<-plot.dat$yvar-plot.dat$pmiss
-  #Add the probability (average) without any cross control.
-
-  mdf<-dflong %>%
-    select(c(!!quosure,pmiss,missing)) %>%
-    group_by(!!quosure,pmiss) %>%
-    filter(n() >= 50) %>% # Remove cases with n<50. Otherwise they are very noisy.
-    summarise(avg=mean(missing)) %>%
-    mutate(ydt=avg-pmiss,
-           yvar=avg)
-  names(mdf)[1]<-"tvar"
-  
-  ggplot(plot.dat,aes(x=pmiss,y=ydt,color=tvar,fill=tvar)) +
-       geom_smooth(method="loess") +
-       geom_point(data=mdf) +
-       scale_color_viridis(name=x,discrete = TRUE,na.value="gray") +
-       scale_fill_viridis(name=x,discrete= TRUE,na.value="gray") +
-       labs(title=paste("De-trended Mean Missingness by",label)) +
-    scale_x_continuous(breaks=xticks.pmiss,labels = xticks.label) +
-    theme(axis.title.x=element_blank(),
-          axis.title.y=element_blank(),
-          legend.title=element_blank(),
-          legend.text=element_text(size=10))# +
-    #geom_function(fun = \(x) (-6.349e+00-3.078e-01)*x - (8.929e-01+1.996e+01)*x^2 + 3.078e-01)
-}
-
-#2 As above, but without specifying a model. 
 
 detrend_catemplot <- function(x, label) {
   quosure <- quo(!!sym(x))
@@ -1719,30 +1316,6 @@ detrend_contemplot<-function(x,label) {
 }
 ```
 
-If we generate a plot with both model predictions and the average inclusion within each factor level and motion threshold (here, lines are the model marginal means and points are the averages from the data), we can see that they do not match, at least for this variable:
-
-```{r}
-detrend_catemplot_model("race_ethnicity.factor","Census Race/Ethnicity",m.h2)
-```
-
-If we use a model with only the race/ethnicity factor:
-
-```{r}
-# One variable, mixed-effect model.
-m.h2.raceethnicity <- lmer(
-  missing ~ poly(pmiss, 2) +
-    race_ethnicity.factor + race_ethnicity.factor:poly(pmiss, 2) +
-    (pmiss | subjectkey),
-  data = dflong
-)
-
-detrend_catemplot_model("race_ethnicity.factor",
-                        "Census Race/Ethnicity",
-                        m.h2.raceethnicity)
-```
-
-That is much improved, so the distortions in the first plot are most likely due to interference from other variables. Regardless H2 is generally not supported by these results. The descriptive data is probably more helpful (and will be presented).
-
 ```{r}
 # Sub-Plots:
 # Categorical:
@@ -1773,27 +1346,6 @@ grid::grid.draw(grid::textGrob("Proportion of Participants Excluded − Total Pr
 grid::grid.draw(grid::textGrob("Motion Threshold (Proportion of Sample Missing)",y=.01,gp = grid::gpar(fontfamily = "Times New Roman")))
 dev.off()
 ```
-
-For this supplement, we will also generate plots for the other variables in groups of four:
-
-```{r,fig.cap="Mean Inclusion/Exclusion by Supplemental Variables and condition (part 1)",fig.height=6.75,fig.width=9}
-h2p1 / h2p2 / h2p3 / h2p6
-grid::grid.draw(grid::textGrob("Proportion of Participants Excluded − Sample Mean",x=.01,rot=90,gp = grid::gpar(fontfamily = "Times New Roman")))
-grid::grid.draw(grid::textGrob("Motion Threshold / Proportion of Sample Missing",y=.01,gp = grid::gpar(fontfamily = "Times New Roman")))
-```
-
-```{r,fig.cap="Mean Inclusion/Exclusion by Supplemental Variables and Condition (part 2)",fig.height=6.75,fig.width=9}
-h2plot.adi / h2plot.coi / h2plot.flank / h2plot.cryst
-grid::grid.draw(grid::textGrob("Proportion of Participants Excluded − Sample Mean",x=.01,rot=90,gp = grid::gpar(fontfamily = "Times New Roman")))
-grid::grid.draw(grid::textGrob("Motion Threshold / Proportion of Sample Missing",y=.01,gp = grid::gpar(fontfamily = "Times New Roman")))
-```
-
-```{r,fig.cap="Mean Inclusion/Exclusion by Supplemental Variables and Condition (part 3)",fig.height=6.75,fig.width=9}
-h2plot.wisc / h2plot.pfac / h2plot.int / h2plot.ext / h2plot.age
-grid::grid.draw(grid::textGrob("Proportion of Participants Excluded − Sample Mean",x=.01,rot=90,gp = grid::gpar(fontfamily = "Times New Roman")))
-grid::grid.draw(grid::textGrob("Motion Threshold / Proportion of Sample Missing",y=.01,gp = grid::gpar(fontfamily = "Times New Roman")))
-```
-
 
 
 ## QCFC Figures (Figure 6)
@@ -1912,21 +1464,61 @@ subtable2<-data.frame(
 subtable2[1,]<-gsub("X\\.","\\.",subtable2[1,])
 ```
 
+...of the `r as.numeric(subtable1[2,1])` participants in ABCD who identified as non-white and who had a p-factor score of greater than 1.5, `r as.numeric(subtable1[2,1])-as.numeric(subtable1[2,7])` (`r (as.numeric(subtable1[2,1])-as.numeric(subtable1[2,7]))/as.numeric(subtable1[2,1])`%) were flagged for inclusion in resting state analyses by the DAIRC (vs `r ((nrow(df)-as.numeric(subtable1[2,1])) - (sum(df$ABCD_rsfmri_QC2)-as.numeric(subtable1[2,7])))/(nrow(df)-as.numeric(subtable1[2,1]))`% in the rest of the sample); of the `r as.numeric(subtable2[2,1])` ABCD participants assigned male at birth with NIH toolbox scores of z <=-1.5, `r as.numeric(subtable2[2,1])-as.numeric(subtable2[2,7])` (`r (as.numeric(subtable2[2,1])-as.numeric(subtable2[2,7]))/as.numeric(subtable2[2,1])`%) were not recommended for inclusion by DAIRC (vs. `r ((nrow(df)-as.numeric(subtable2[2,1])) - (sum(df$ABCD_rsfmri_QC2)-as.numeric(subtable2[2,7])))/(nrow(df)-as.numeric(subtable2[2,1]))`% in the rest of the sample).
+
+## Save Tables
+
+```{r}
+openxlsx::saveWorkbook(tables.xlsx,"Manuscript/Tables/tables.xlsx",overwrite=TRUE)
+```
+
+```{=latex}
+\fi
+```
+
+# Supplementary Results
+
+## F-tests for discrete variable-Motion associations
+
+In the manuscript, F tests associated with the discrete variables tested are omitted for brevity. These are printed in Tables 1-2.
+
+```{r}
+discOut %>% 
+  filter(IV %in% c("filtered_fd_0.1","filtered_fd_0.2","filtered_fd_0.3")) %>% 
+  select(DV:MODEL_P) %>% 
+  distinct() %>% 
+  as_hux() %>% 
+  insert_column(c("Threshold",rep(c(".1mm",".2mm",".3mm"),each=6))) %>% 
+  set_caption("F tests for relation of discrete DVs with FD after scrubbing, by threshold (pt. 1)")
+```
+
+```{r}
+discOut %>% 
+  filter(IV %in% c("filtered_fd_0.4","filtered_fd_0.5")) %>% 
+  select(DV:MODEL_P) %>% 
+  distinct() %>% 
+  as_hux() %>% 
+  insert_column(c("Threshold",rep(c(".4mm",".5mm"),each=6))) %>% 
+  set_caption("F tests for relation of discrete DVs with FD after scrubbing, by threshold (pt. 2)")
+```
+
+## Multiply at Risk Cell Counts
+
+Count of participants with multiple risk factors who were excluded (by condition) appear in Table 3-4.
+
 ```{r}
 subtable1
 ```
 
-Vs. `r ((11876-552)-(9627-339))/(11876-552)`
 
 ```{r}
 subtable2
 ```
 
-Vs. `r ((11876-382)-(9627-207))/(11876-382)`
-
-# Supplementary Results
 
 ## Categorical Variable Table by Condition
+
+See Table 5.
 
 ```{r}
 catvars<-c("sex",
@@ -2011,39 +1603,9 @@ CatVar375Hux<-as_hux(CatVar375Table) %>%
 CatVar375Hux
 ```
 
-
-## Alternative Continuous Variable Plots (psychopathology)
-
-Here are some alternative ways of plotting continuous variables (using psychopathology as an example).
-
-```{r psychoviolin}
-df %>% filter(ABCD_rsfmri_QC2==TRUE) %>%
-ggplot(aes(x=pfactor.z)) +
-  geom_density(aes(color = "F"), alpha = .2, data = df %>% filter(ABCD_rsfmri_QC1==TRUE)) +
-  geom_density(aes(color = "C"), alpha = .2, data = df %>% filter(any_rest==TRUE)) +
-  geom_density(aes(color = "R"), alpha = .2, data = df %>% filter(ABCD_rsfmri_QC2==TRUE)) +
-  geom_density(aes(color = "1"), alpha = .2, data = df %>% filter(gframes_0.1_375==TRUE))
-
-psubset<-df %>% filter(ABCD_rsfmri_QC2==TRUE) %>% select(pfactor)
-psubset2<-df %>% filter(ABCD_rsfmri_QC1==TRUE) %>% select(pfactor)
-
-test<-as.data.frame(rbind(quantile(psubset2$pfactor,probs=c(.05,.20,.35,.5,.65,.80,.95),na.rm=TRUE),
-            quantile(psubset$pfactor,probs=c(.05,.20,.35,.5,.65,.80,.95),na.rm=TRUE)))
-test$label=as.factor(c("T","R"))
-
-ggplot(test,aes(x=label)) +
-  geom_segment(aes(xend=label,y=`5%`,yend=`95%`),color="red",size=2) +
-  geom_segment(aes(xend=label,y=`20%`,yend=`80%`),color="blue",size=2) +
-  geom_segment(aes(xend=label,y=`35%`,yend=`65%`),color="yellow",size=2) +
-  geom_point(aes(y=`50%`))
-
-ggplot(df,aes(x=filtered_fd_0.2,y=pfactor)) +
-  geom_bin2d()
-```
-
 ## Missingness in Behavioral Data
 
-This table shows missingness counts in non-imaging variables with more than 50 missing cases.
+Table 6 shows missingness counts in non-imaging variables with more than 50 missing cases.
 
 ```{r}
 df %>% 
@@ -2061,7 +1623,7 @@ df %>%
 
 ## Adjusted Models -- Forest Plot
 
-A graphical depiction of effects from the adjusted/condition models.
+Figure 1-2 depict effects from the adjusted/condition models.
 
 ```{r}
 MFformat<-\(m) {
@@ -2217,6 +1779,219 @@ ggplot(forestdfB,aes(y=term,color=threshold)) +
   xlab("Odds Ratio of Missingness + 95% CI")
 ```
 
+## Sensitivity to Site/Scanner
+
+Percent Excluded by site is shown in table 7.
+
+```{r}
+sitesummary2 %>%  
+  group_by(sample) %>% 
+  filter(Percent_Missing == max(Percent_Missing)) %>%
+  mutate(Percent_Missing = Percent_Missing*100) %>% 
+  select(sitelabel:Percent_Missing) %>% 
+  rename("Site"="sitelabel",
+         "Condition"="sample",
+         "% Excluded"="Percent_Missing") %>% 
+  as_hux() %>% 
+  set_caption("Sites with Highest \\% Excluded, by Condition")
+```
+
+### Sensitivity to Site/Scanner Table
+
+Table 8 shows fixed effects of a 'scanner type' variable in 3 of our 'adjusted' models both with and without control for site.
+
+```{r}
+MformatCI <- \(m) {
+  stars <- sdlabFunctions::starPs(m[, 4])
+  cbind(
+    paste0(
+      ORformat(m[, 2]),
+      stars,
+      " [",
+      ORformat(m[, 1]),
+      "–",
+      ORformat(m[, 3]),
+      "]"))
+}
+
+sitecoefs<-rbind(cbind(MformatCI(model.ABCC.scanner.results)[33:36,],
+      MformatCI(model.QC2.scanner.results)[33:36,],
+      MformatCI(model.2mm.scanner.results)[33:36,]),
+      cbind(MformatCI(model.ABCC.scanner.site.results)[33:36,],
+      MformatCI(model.QC2.scanner.site.results)[33:36,],
+      MformatCI(model.2mm.scanner.site.results)[33:36,]))
+
+as_huxtable(sitecoefs) %>%
+  insert_row(c("ABCC", "QC2", ".2mm")) %>%
+  insert_row(c("Without Site Control", "", "")) %>%
+  merge_cells(1, 1:3) %>%
+  #merge_cells(2, 1:3) %>%
+  insert_row(c("With Site Control","",""),after = 6) %>% 
+  merge_cells(7,1:3) %>% 
+  insert_column(
+    c(
+      "",
+      "Scanner (ref: Philips Achieva)",
+      "GE Discovery MR750",
+      "Philips Ingenia",
+      "Siemens Prisma",
+      "Siemens Prisma fit",
+      "",
+      "GE Discovery MR750",
+      "Philips Ingenia",
+      "Siemens Prisma",
+      "Siemens Prisma fit"
+    )
+  ) %>%
+  set_caption("OR of scanner type effect, with and without site control, in condition adjusted models [95\\% CI]. ***: p<.001") %>% 
+  set_wrap(TRUE) %>% 
+  set_width(1)
+```
+
+### Sensitivity to Site/Scanner Forest Plots
+
+Figures 3-4 show forest plots of ORs with a significant (p<.05) model term in either the site-controlled or the site un-controlled adjusted model. They are here to visualize the effects of site control on the adjusted models.
+
+```{r fig.cap="Significant ORs predicting ABCC missingness with and without site control"}
+ABCC.compdf <- rbind(
+  model.ABCC.site.results %>%
+    as.data.frame() %>%
+    rownames_to_column("term") %>%
+    rename_with( ~ c("term", "lowCI", "OR", "highCI", "p")) %>%
+    mutate(
+      lowCI = replace_na(lowCI, min(lowCI, na.rm = TRUE)),
+      highCI = replace_na(highCI, max(highCI, na.rm = TRUE)),
+      sig = p < .05,
+      model = "Site Control"
+    ) %>%
+    mutate(across(lowCI:highCI, exp)),
+  model.ABCC.results %>%
+    as.data.frame() %>%
+    rownames_to_column("term") %>%
+    rename_with( ~ c("term", "lowCI", "OR", "highCI", "p")) %>%
+    mutate(
+      lowCI = replace_na(lowCI, min(lowCI, na.rm = TRUE)),
+      highCI = replace_na(highCI, max(highCI, na.rm = TRUE)),
+      sig = p < .05,
+      model = "No Control"
+    ) %>%
+    mutate(across(lowCI:highCI, exp))
+) %>%
+  mutate(model = as.factor(model),
+         alphaval=case_when(sig ~ 1,
+                            !sig ~ .5))
+
+
+#terms where one model coefficient was sig
+sigterms <-
+  (ABCC.compdf %>% group_by(term) %>% summarise(anysig = sum(sig) != 0) %>% filter(anysig))$term
+
+ABCC.compdf<-ABCC.compdf %>% mutate(alphaval=factor(alphaval,levels=c(.5,1),labels=c("p>.05","p<.05")))
+
+test<-ggplot(ABCC.compdf %>% filter(term %in% sigterms),
+       aes(x = term, color = model, alpha = alphaval)) +
+  geom_point(aes(y = OR), position = position_dodge(.2)) +
+  geom_linerange(aes(ymin = lowCI, ymax = highCI, x = term),
+                 position = position_dodge(.2)) +
+  ylim(-4, 4) +
+  geom_hline(lty = 2, aes(yintercept = 1), colour = 'black') +
+  coord_flip() + theme(legend.title = element_blank())
+```
+
+
+```{r fig.cap="Significant ORs predicting DAIRC Recommended missingness with and without site control"}
+QC2.compdf <- rbind(
+  model.QC2.site.results %>%
+    as.data.frame() %>%
+    rownames_to_column("term") %>%
+    rename_with( ~ c("term", "lowCI", "OR", "highCI", "p")) %>%
+    mutate(
+      lowCI = replace_na(lowCI, min(lowCI, na.rm = TRUE)),
+      highCI = replace_na(highCI, max(highCI, na.rm = TRUE)),
+      sig = p < .05,
+      model = "Site Control"
+    ) %>%
+    mutate(across(lowCI:highCI, exp)),
+  model.QC2.results %>%
+    as.data.frame() %>%
+    rownames_to_column("term") %>%
+    rename_with( ~ c("term", "lowCI", "OR", "highCI", "p")) %>%
+    mutate(
+      lowCI = replace_na(lowCI, min(lowCI, na.rm = TRUE)),
+      highCI = replace_na(highCI, max(highCI, na.rm = TRUE)),
+      sig = p < .05,
+      model = "No Control"
+    ) %>%
+    mutate(across(lowCI:highCI, exp))
+) %>%
+  mutate(model = as.factor(model),
+         alphaval=case_when(sig ~ 1,
+                            !sig ~ .5))
+
+#terms where one model coefficient was sig
+sigterms<-(QC2.compdf %>% group_by(term) %>% summarise(anysig=sum(sig)!=0) %>% filter(anysig))$term
+
+QC2.compdf<-QC2.compdf %>% mutate(alphaval=factor(alphaval,levels=c(.5,1),labels=c("p>.05","p<.05")))
+
+ggplot(QC2.compdf %>% filter(term %in% sigterms),
+       aes(x = term, color = model, alpha = alphaval)) +
+  geom_point(aes(y = OR), position = position_dodge(.2)) +
+  geom_linerange(aes(ymin = lowCI, ymax = highCI, x = term),
+                 position = position_dodge(.2)) +
+  ylim(-4, 4) +
+  geom_hline(lty = 2, aes(yintercept = 1), colour = 'black') +
+  coord_flip() + theme(legend.title = element_blank())
+
+```
+
+```{r fig.cap="Significant ORs predicting .2mm missingness with and without site control"}
+twomm.compdf <- rbind(
+  model.2mm.site.results %>%
+    as.data.frame() %>%
+    rownames_to_column("term") %>%
+    rename_with( ~ c("term", "lowCI", "OR", "highCI", "p")) %>%
+    mutate(
+      lowCI = replace_na(lowCI, min(lowCI, na.rm = TRUE)),
+      highCI = replace_na(highCI, max(highCI, na.rm = TRUE)),
+      sig = p < .05,
+      model = "Site Control"
+    ) %>%
+    mutate(across(lowCI:highCI, exp)),
+  model.2mm.results %>%
+    as.data.frame() %>%
+    rownames_to_column("term") %>%
+    rename_with( ~ c("term", "lowCI", "OR", "highCI", "p")) %>%
+    mutate(
+      lowCI = replace_na(lowCI, min(lowCI, na.rm = TRUE)),
+      highCI = replace_na(highCI, max(highCI, na.rm = TRUE)),
+      sig = p < .05,
+      model = "No Control"
+    ) %>%
+    mutate(across(lowCI:highCI, exp))
+) %>%
+  mutate(model = as.factor(model),
+         alphaval=case_when(sig ~ 1,
+                            !sig ~ .5))
+
+
+#terms where one model coefficient was sig
+sigterms <-
+  (twomm.compdf %>% group_by(term) %>% summarise(anysig = sum(sig) != 0) %>% filter(anysig))$term
+
+twomm.compdf<-twomm.compdf %>% mutate(alphaval=factor(alphaval,levels=c(.5,1),labels=c("p>.05","p<.05")))
+
+ggplot(twomm.compdf %>% filter(term %in% sigterms),
+       aes(x = term, color = model, alpha = alphaval)) +
+  geom_point(aes(y = OR), position = position_dodge(.2)) +
+  geom_linerange(aes(ymin = lowCI, ymax = highCI, x = term),
+                 position = position_dodge(.2)) +
+  ylim(-4, 4) +
+  geom_hline(lty = 2, aes(yintercept = 1), colour = 'black') +
+  coord_flip() + theme(legend.title = element_blank())
+
+```
+
+
 ## Current Fast Track QC vs DAIRC recommendations
 
 We state in the text that the currently published fastqc is non-overlapping with DAIRC inclusion recommendations. This table illustrates that non-overlap.
@@ -2229,12 +2004,271 @@ table(df$fastqcok,df$ABCD_rsfmri_QC1,dnn=c("FastQC","Tabulated"))
 table(df$fastqcok,df$ABCD_rsfmri_QC2,dnn=c("FastQC","DAIRC"))
 ```
 
+## Modeling Trends Across Conditions (H2)
+
+This model specifically looks at changes associated with motion threshold choice in the ABCC data. In the pre-registration, we originally proposed a mixed effects logistic model where each participant had a case for each motion threshold, and the percentage of data missing from each threshold was used as a within-subject variable. In simulation, we discovered a number of problems with this approach:
+
+1. The proposed mixed effects logistic regression created very poor predictions and model fits in simulation, and often did not converge. A linear model of probability proved more stable and accurate and we determined to use that approach (a logistic model is also presented below, but it is similarly flawed).
+2. We proposed that an interaction between a variable and the 'pmiss' variable would indicate that bias was worsening as more data was excluded. However, in simulating this approach we discovered that in the case that there was a bias but it did not worsen as more data was excluded, as, for example, if 2 males were excluded for every female, this would surface as a linear interaction between pmiss and sex in the model. Instead, a worsening bias would be indicated by an interaction between a variable and a polynomial of pmiss, which would indicate a curvilinear trajectory.
+
+(notes from the simulation are available on osf)
+
+An important remaining question from the simulation study was whether to include an intercept and main effects in the model. As, at pmiss=0, the probability of exclusion ought to be 0 for everyone, one could argue the intercept should be omitted. Model fit is compared between the two models in Table 9. The 'full' model has superior fit characteristics across indices. The GLM model, which is closer to what we originally proposed, does not converge and is not presented. 
+
+```{r}
+# h2 model with intercepts.
+m.h2 <- lmer(
+  missing ~ poly(pmiss, 2) +
+    sex + sex:poly(pmiss, 2) +
+    household.income + household.income:poly(pmiss, 2) +
+    p.edu + p.edu:poly(pmiss, 2) +
+    race_ethnicity.factor + race_ethnicity.factor:poly(pmiss, 2) +
+    ksads_factor + ksads_factor:poly(pmiss, 2) +
+    pds_category + pds_category:poly(pmiss, 2) +
+    adi.z + adi.z:poly(pmiss, 2) +
+    coi.z + coi.z:poly(pmiss, 2) +
+    nihtbx_flanker_agecorrected.z + nihtbx_flanker_agecorrected.z:poly(pmiss, 2) +
+    nihtbx_cryst_agecorrected.z + nihtbx_cryst_agecorrected.z:poly(pmiss, 2) +
+    nihtbx_totalcomp_agecorrected.z + nihtbx_totalcomp_agecorrected.z:poly(pmiss, 2) +
+    pea_wiscv_tss.z + pea_wiscv_tss.z:poly(pmiss, 2) +
+    pfactor.z + pfactor.z:poly(pmiss, 2) +
+    INT.z + INT.z:poly(pmiss, 2) +
+    EXT.z + EXT.z:poly(pmiss, 2) +
+    interview_age.z + interview_age.z:poly(pmiss, 2) +
+    bmiAgeZ + bmiAgeZ:poly(pmiss, 2) +
+    (pmiss | subjectkey),
+  data = dflong
+)
+
+# h2 model with intercepts removed
+m.h2.stripped <- lmer(
+  missing ~ pmiss + poly(pmiss, 2) +
+    sex:poly(pmiss,2) +
+    household.income:poly(pmiss,2) +
+    p.edu:poly(pmiss,2) +
+    race_ethnicity.factor:poly(pmiss,2) +
+    ksads_factor:poly(pmiss,2) +
+    pds_category:poly(pmiss,2) +
+    adi.z:poly(pmiss,2) +
+    coi.z:poly(pmiss,2) +
+    nihtbx_flanker_agecorrected.z:poly(pmiss,2) +
+    nihtbx_cryst_agecorrected.z:poly(pmiss,2) +
+    nihtbx_totalcomp_agecorrected.z:poly(pmiss,2) +
+    pea_wiscv_tss.z:poly(pmiss,2) +
+    pfactor.z:poly(pmiss,2) +
+    INT.z:poly(pmiss,2) +
+    EXT.z:poly(pmiss,2) +
+    interview_age.z:poly(pmiss,2) +
+    bmiAgeZ:poly(pmiss,2) +
+    + 0 +
+    (pmiss + 0 | subjectkey),
+  data = dflong
+)
+
+# h2 model as a glm - this does not converge
+# m.h2.glm<- glmer(
+#   missing ~ poly(pmiss, 2) +
+#     sex + sex:poly(pmiss, 2) +
+#     household.income + household.income:poly(pmiss, 2) +
+#     p.edu + p.edu:poly(pmiss, 2) +
+#     race_ethnicity.factor + race_ethnicity.factor:poly(pmiss, 2) +
+#     ksads_factor + ksads_factor:poly(pmiss, 2) +
+#     pds_category + pds_category:poly(pmiss, 2) +
+#     adi.z + adi.z:poly(pmiss, 2) +
+#     coi.z + coi.z:poly(pmiss, 2) +
+#     nihtbx_flanker_agecorrected.z + nihtbx_flanker_agecorrected.z:poly(pmiss, 2) +
+#     nihtbx_cryst_agecorrected.z + nihtbx_cryst_agecorrected.z:poly(pmiss, 2) +
+#     nihtbx_totalcomp_agecorrected.z + nihtbx_totalcomp_agecorrected.z:poly(pmiss, 2) +
+#     pea_wiscv_tss.z + pea_wiscv_tss.z:poly(pmiss, 2) +
+#     pfactor.z + pfactor.z:poly(pmiss, 2) +
+#     INT.z + INT.z:poly(pmiss, 2) +
+#     EXT.z + EXT.z:poly(pmiss, 2) +
+#     interview_age.z + interview_age.z:poly(pmiss, 2) +
+#     bmiAgeZ + bmiAgeZ:poly(pmiss, 2) +
+#     (pmiss | subjectkey),
+#   family="binomial",
+#   data = dflong,
+#   nAGQ=0,
+#   control=glmerControl(optimizer="nloptwrap")
+# )
+
+performance::print_md(performance::compare_performance(m.h2,m.h2.stripped))
+```
+
+
+```{r}
+h2sum<-summary(m.h2)
+temp = capture.output(h2sum)
+End   = grep("Fixed effects", temp)-1
+print(unname(temp[0:End]))
+```
+
+See Table 10-11 for the fixed effects from the omnibus model.
+
+```{r h2table}
+pnames<-rownames(h2sum$coefficients)
+
+h2table<-h2sum$coefficients %>% as.data.frame() %>%
+  rownames_to_column(var = "Parameter") %>%
+  left_join(parameters::ci(m.h2)) %>%
+  mutate(star = sdlabFunctions::starPs(`Pr(>|t|)`)) %>%
+  select(c(Parameter, Estimate, CI_low, CI_high,star)) %>%
+  mutate(level=c(1:3,rep(1,31),rep(2:3,31)),
+         basep=c(rep("",3),pnames[4:34],rep(pnames[4:34],each=2))) %>%
+  pivot_wider(id_cols=basep,names_from=level,values_from = Estimate:star) %>%
+  mutate(across(where(is.numeric),ORformat))
+
+h2hux<-h2table[,c(1,2,5,8,11,3,6,9,12,4,7,10,13)] %>%
+  as_hux(add_colnames=FALSE) %>%
+  insert_row("","Intercept","","","","pmiss","","","","pmiss^2","","","") %>%
+  merge_cells(1, 2:5) %>% merge_cells(1, 6:9) %>% merge_cells(1, 10:12) %>%
+  insert_row("","Main Eff.","","","","Interaction","","","","Q.Interaction","","","",after=2) %>%
+  merge_cells(3, 2:5) %>% merge_cells(3, 6:9) %>% merge_cells(3, 10:12) %>%
+  insert_row("",rep(c("B","CI.l","CI.u","*"),3)) 
+
+h2hux[,1] <- c(rep("",4),alllevels[-1]) 
+
+h2hux <- h2hux %>% insert_row(
+    "Household Income (ref: $100-$200k)",
+    after = 6,
+    colspan = 9,
+    fill = ""
+  ) %>%
+  insert_row(
+    "Highest Parental Education (ref: College Degree)",
+    after = 11,
+    colspan = 9,
+    fill = ""
+  ) %>%
+  insert_row(
+    "Census Race/Ethnicity (ref: White)",
+    after = 13+3,
+    colspan = 9,
+    fill = ""
+  ) %>%
+  insert_row(
+    "KSADS Trauma Count (ref: 0 Exposures)",
+    after = 18+3,
+    colspan = 9,
+    fill = ""
+  ) %>%
+  insert_row(
+    "Pubertal Status (ref: pre-pubertal)",
+    after = 21+3,
+    colspan = 9,
+    fill = ""
+  )
+
+h2hux[c(1:4,5:24),] %>% set_caption("H2 / Omnibus model fixed effects, pt. 1")
+```
+
+```{r}
+h2hux[c(1:4,25:nrow(h2hux)),] %>% set_caption("H2 / Omnibus model fixed effects, pt. 2")
+```
+
+### H2 Marginal Means plotting (Figure 5)
+
+```{r}
+# These functions are similar to the ones defined above which draw simple trensd
+# with means. These versions also include model generated marginal means. They
+# use the same axis descriptors defined above.
+
+detrend_catemplot_model<-function(x,label,model=NULL) {
+  quosure<-quo(!!sym(x))
+  if(!is.null(model)) {
+  lmean <- emmeans(model,
+                   as.formula(paste("~",x,"| pmiss")),
+                     "pmiss",
+                     at = list(pmiss=xticks.pmiss,
+                               z=levels(df %>% 
+                                          group_by(!!quosure) %>%
+                                          filter(n() >= 50) %>% 
+                                          ungroup() %>% 
+                                          select(!!quosure) %>% 
+                                          unlist())),
+                   rg.limit = 400000)
+
+  plot.dat<-emmip(lmean,
+                  as.formula(paste(x,"~ pmiss")),
+                  CIs=TRUE,
+                  plotit = FALSE)
+  }
+  #Add detrended prediction
+  plot.dat$ydt<-plot.dat$yvar-plot.dat$pmiss
+  #Add the probability (average) without any cross control.
+
+  mdf<-dflong %>%
+    select(c(!!quosure,pmiss,missing)) %>%
+    group_by(!!quosure,pmiss) %>%
+    filter(n() >= 50) %>% # Remove cases with n<50. Otherwise they are very noisy.
+    summarise(avg=mean(missing)) %>%
+    mutate(ydt=avg-pmiss,
+           yvar=avg)
+  names(mdf)[1]<-"tvar"
+  
+  ggplot(plot.dat,aes(x=pmiss,y=ydt,color=tvar,fill=tvar)) +
+       geom_smooth(method="loess") +
+       geom_point(data=mdf) +
+       scale_color_viridis(name=x,discrete = TRUE,na.value="gray") +
+       scale_fill_viridis(name=x,discrete= TRUE,na.value="gray") +
+       labs(title=paste("De-trended Mean Missingness by",label)) +
+    scale_x_continuous(breaks=xticks.pmiss,labels = xticks.label) +
+    theme(axis.title.x=element_blank(),
+          axis.title.y=element_blank(),
+          legend.title=element_blank(),
+          legend.text=element_text(size=10))# +
+    #geom_function(fun = \(x) (-6.349e+00-3.078e-01)*x - (8.929e-01+1.996e+01)*x^2 + 3.078e-01)
+}
+
+```
+
+The poor fit of the omnibus model is shown in Figure 5, a plot with both model predicted marginal means and the average inclusion within each factor level and motion threshold (here, lines are the model marginal means and points are the averages from the data).
+
+```{r,fig.cap="Marginal Means Plot of Race/Ethnicity on exclusion by condition (adjusted)",fig.height=3,fig.width=9}
+detrend_catemplot_model("race_ethnicity.factor","Census Race/Ethnicity",m.h2)
+```
+
+Figure 6 shows a similar plot but in a bivariate model -- fit is much improved, indicating that distortions in the first plot are most likely due to interference from other variables. Regardless, H2 is generally not supported by these results. The descriptive data is probably more helpful.
+
+```{r,fig.cap="Marginal Means Plot of Race/Ethnicity on exclusion by condition (bivariate)",fig.height=3,fig.width=9}
+# One variable, mixed-effect model.
+m.h2.raceethnicity <- lmer(
+  missing ~ poly(pmiss, 2) +
+    race_ethnicity.factor + race_ethnicity.factor:poly(pmiss, 2) +
+    (pmiss | subjectkey),
+  data = dflong
+)
+
+detrend_catemplot_model("race_ethnicity.factor",
+                        "Census Race/Ethnicity",
+                        m.h2.raceethnicity)
+```
+
+Figures 7-9 reproduce Manuscript figures 5 for all of the other demographic and behavioral variables (in groups of 4):
+
+```{r,fig.cap="Mean Inclusion/Exclusion by Supplemental Variables and condition (part 1)",fig.height=6.75,fig.width=9}
+h2p1 / h2p2 / h2p3 / h2p6
+grid::grid.draw(grid::textGrob("Proportion of Participants Excluded − Sample Mean",x=.01,rot=90,gp = grid::gpar(fontfamily = "Times New Roman")))
+grid::grid.draw(grid::textGrob("Motion Threshold / Proportion of Sample Missing",y=.01,gp = grid::gpar(fontfamily = "Times New Roman")))
+```
+
+```{r,fig.cap="Mean Inclusion/Exclusion by Supplemental Variables and Condition (part 2)",fig.height=6.75,fig.width=9}
+h2plot.adi / h2plot.coi / h2plot.flank / h2plot.cryst
+grid::grid.draw(grid::textGrob("Proportion of Participants Excluded − Sample Mean",x=.01,rot=90,gp = grid::gpar(fontfamily = "Times New Roman")))
+grid::grid.draw(grid::textGrob("Motion Threshold / Proportion of Sample Missing",y=.01,gp = grid::gpar(fontfamily = "Times New Roman")))
+```
+
+```{r,fig.cap="Mean Inclusion/Exclusion by Supplemental Variables and Condition (part 3)",fig.height=6.75,fig.width=9}
+h2plot.wisc / h2plot.pfac / h2plot.int / h2plot.ext / h2plot.age
+grid::grid.draw(grid::textGrob("Proportion of Participants Excluded − Sample Mean",x=.01,rot=90,gp = grid::gpar(fontfamily = "Times New Roman")))
+grid::grid.draw(grid::textGrob("Motion Threshold / Proportion of Sample Missing",y=.01,gp = grid::gpar(fontfamily = "Times New Roman")))
+```
 
 ## Association of QC missingness with Propensity weighting.
 
-Gard (2020) notes that analyses using propensity weighting can be biased when missing data is correlated with population weights. They present data that association between missingness and population weights are small when considering structural and task-based brain data from ABCD. Here, we repeat these analyses considering rs-fMRI data in each condition.
+Gard (2020) notes that analyses using propensity weighting can be biased when missing data is correlated with population weights. They presented data that association between missingness and population weights are small when considering structural and task-based brain data from ABCD. Here, we repeat these analyses considering rs-fMRI data in each condition.
 
-Gard et al. appear to have used Welch's two-sample t-tests to examine differences in propensity weight between included and excluded groups, and we will do the same here.
+To the best of our knowledge, Gard et al. used Welch's two-sample t-tests to examine differences in propensity weight between included and excluded groups, and we will do the same here. Results from these tests are shown in table 12.
 
 ```{r}
 gard_weighting_test<-function(boolvar) {
@@ -2253,9 +2287,12 @@ as_hux(weight_ttests) %>%
 
 ## Association of Exclusion with Expanded Demographic Variables
 
-Available information on household income and (especially) race/ethnicity was greatly simplified in the main analysis for the purpose of brevity and comparibility with existing literature. For the sake of completeness and inclusivity, we present descriptive tables and bivariate models for the more granular variables here:
+Available information on household income and (especially) race/ethnicity was greatly simplified in the main analysis for the purpose of brevity and to facilitate comparison with existing literature. For the sake of completeness and inclusivity, we present more nuanced codings of these variables here.
 
 ### Household Income
+
+Table 13 and 14 presents descriptives and a bivariate model for a SES variable inclusive of all income bins available in the ABCD dataset.
+
 
 ```{r}
 #Reorder the factor in increasing order and relabel for descriptives.
@@ -2374,7 +2411,7 @@ Census Race/Ethnicity Categories were used in the manuscript for the sake of bre
 
 #### Descriptives
 
-This table presents a comparison of the census race/ethnicity measure included in ABCD and the extended race/ethnicity coding.
+Table 15 describes the many race/ethnicity endorsement variables available in ABCD, cross-referenced against the census race/ethnicity variable used in the manuscript.
 
 ```{r}
 retable1<-df %>% select(race_ethnicity.factor:ethn.iden.hisp) %>%
@@ -2386,7 +2423,7 @@ retable1<-df %>% select(race_ethnicity.factor:ethn.iden.hisp) %>%
   )) %>% as_hux() %>% set_number_format(2:nrow(.),2:ncol(.),value=fmt_percent()) %>%
   t() %>% set_caption("Percentage Endorsing Granular Race/Ethnicity Variables within Census Race/Ethnicity Groups")
 
-retable1[,1] <- c("Census Race/Ethnicity",
+retable1[,1] <- c("",
                   "White",
                   "Black",
                   "American Indian",
@@ -2407,10 +2444,12 @@ retable1[,1] <- c("Census Race/Ethnicity",
                   "Don't Know",
                   "Hispanic")  
 
-retable1[,1:6]
+retable1[,1:6] %>% 
+  insert_row("","Census Race/Ethnicity","","","","") %>% 
+  merge_cells(1,2:6)
 ```
 
-Next, here are the count and percentages of each of the granular variables, by QC condition:
+Table 16 show descriptives of these variables by condition.
 
 ```{r}
 boolTable<-\(data=df,bool=TRUE) {
@@ -2473,7 +2512,7 @@ retable2 %>%  as_hux() %>%
 
 #### Bivariate Models
 
-Finally, we present bivariate models of the granular binary race/ethnicity coding variables:
+Finally, Tables 17-19 depict bivariate models for each race/ethnicity endorsement variable by condition.
 
 ```{r}
 remodels<-lapply(names(df %>% select(race.iden.white:ethn.iden.hisp)),bvmodel,newline="\\newline ")
@@ -2520,7 +2559,7 @@ The following changes were made to the analysis plan post-registration:
 * More data was excluded prior to motion filtering than expected and there were more differences in inclusion criteria between ABCD versions than expected. Consequently, three 'QC' conditions were added in addition to the motion thresholds, to provide additional detail to inform study design.
 * The originally planned approach to evaluate H2 was found to be infeasible (See 'H2 Model,' above). In practice, a visual inspection of the data did not support H2 (see H2 Marginal Means Plotting). Specifically, because so much data was missing, biases in the missing data were self-correcting as more data was excluded. I.e., in the event that males were more likely to be excluded than females (which appears to be true in this dataset), the bias is strongest as data is first excluded from the dataset. Once a significantly larger proportion of males have been excluded than females, the over-representation of females in the sample results in their being more likely to be excluded. At the extreme, when all of the data is excluded, there is no bias).
 
-Here, we present the analyses originally proposed as written, excepting H2. Specifically, we present results from adjusted models without the BMI variable in the motion scrubbing conditions.
+Here, we present the analyses originally proposed as written, excepting H2. Specifically, we present results from adjusted models without the BMI variable in the motion scrubbing conditions in Tables 20-21.
 
 ```{r}
 model.h1prereg.5mm<-glm(!gframes_0.5_375 ~ sex + household.income + p.edu + race_ethnicity.factor + ksads_factor + pds_category + adi.z + coi.z + nihtbx_flanker_agecorrected.z + nihtbx_cryst_agecorrected.z + nihtbx_totalcomp_agecorrected.z + pea_wiscv_tss.z + pfactor.z + INT.z + EXT.z + interview_age.z ,data=df,family="binomial")
@@ -2632,12 +2671,48 @@ h1prereghux[c(1:2,21:38),] %>%
   set_caption("Adjusted Models Output, as Pre-registered (Pt. 2). ***: p<.001; **: p<.01; *:p<.05") %>% set_label("PreRegModel2")
 ```
 
-# Save Tables
+# Supplemental References
 
-```{r}
-openxlsx::saveWorkbook(tables.xlsx,"Manuscript/Tables/tables.xlsx",overwrite=TRUE)
-```
+Achenbach, T. M., Dumenci, L., \& Rescorla, L. A. (2002). Ten-year comparisons of problems and competencies for national samples of youth: Self, parent, and teacher reports. \textit{Journal of Emotional and Behavioral Disorders, 10}(4), 194–203. \href{https://doi.org/10.1177/10634266020100040101}{doi:10.1177/10634266020100040101}
+
+Akshoomoff, N., Beaumont, J. L., Bauer, P. J., Dikmen, S. S., Gershon, R. C., Mungas, D., Slotkin, J., Tulsky, D., Weintraub, S., Zelazo, P. D., \& Heaton, R. K. (2013). Nih Toolbox Cognition Battery (cb): Composite Scores of Crystallized, Fluid, and Overall Cognition. \textit{Monographs of the Society for Research in Child Development, 78}(4), 119–132. \href{https://doi.org/10.1111/mono.12038}{doi:10.1111/mono.12038}
+
+Brislin, S. J., Martz, M. E., Joshi, S., Duval, E. R., Gard, A., Clark, D. A., Hyde, L. W., Hicks, B. M., Taxali, A., Angstadt, M., Rutherford, S., Heitzeg, M. M., \& Sripada, C. (2021). Differentiated nomological networks of internalizing, externalizing, and the general factor of psychopathology ('p factor’) in emerging adolescence in the ABCD study. \textit{Psychological Medicine}, 1–11. \href{https://doi.org/10.1017/S0033291720005103}{doi:10.1017/S0033291720005103}
+
+Burley, D. T., Anning, K. L., \& van Goozen, S. H. M. (2022). The association between hyperactive behaviour and cognitive inhibition impairments in young children. \textit{Child Neuropsychology, 28}(3), 302–317. \href{https://doi.org/10.1080/09297049.2021.1976128}{doi:10.1080/09297049.2021.1976128}
+
+Canivez, G. L., McGill, R. J., Dombrowski, S. C., Watkins, M. W., Pritchard, A. E., \& Jacobson, L. A. (2020). Construct Validity of the WISC-V in Clinical Cases: Exploratory and Confirmatory Factor Analyses of the 10 Primary Subtests. \textit{Assessment, 27}(2), 274–296. \href{https://doi.org/10.1177/1073191118811609}{doi:10.1177/1073191118811609}
+
+Cheng, T. W., Magis-Weinberg, L., Guazzelli Williamson, V., Ladouceur, C. D., Whittle, S. L., Herting, M. M., Uban, K. A., Byrne, M. L., Barendse, M. E. A., Shirtcliff, E. A., \& Pfeifer, J. H. (2021). A Researcher’s Guide to the Measurement and Modeling of Puberty in the ABCD Study® at Baseline. \textit{Frontiers in Endocrinology, 12}. \href{https://www.frontiersin.org/articles/10.3389/fendo.2021.608575}{doi:10.3389/fendo.2021.608575}
+
+Cosgrove, K. T., McDermott, T. J., White, E. J., Mosconi, M. W., Thompson, W. K., Paulus, M. P., Cardenas-Iniguez, C., \& Aupperle, R. L. (2022). Limits to the generalizability of resting-state functional magnetic resonance imaging studies of youth: An examination of ABCD Study® baseline data. \textit{Brain Imaging and Behavior, 16}(4), 1919–1925. \href{https://doi.org/10.1007/s11682-022-00665-2}{doi:10.1007/s11682-022-00665-2}
+
+Clark, D. A., Hicks, B. M., Angstadt, M., Rutherford, S., Taxali, A., Hyde, L., Weigard, A., Heitzeg, M. M., \& Sripada, C. (2021). The General Factor of Psychopathology in the Adolescent Brain Cognitive Development (ABCD) Study: A Comparison of Alternative Modeling Approaches. In \textit{Clinical psychological science: A journal of the Association for Psychological Science, 9}(2), 169–182. \href{https://doi.org/10.1177/2167702620959317}{doi:10.1177/2167702620959317}
+
+Evans, G. W., \& Kim, P. (2010). Multiple risk exposure as a potential explanatory mechanism for the socioeconomic status-health gradient: Multiple risk exposure and SES-health gradient. \textit{Annals of the New York Academy of Sciences, 1186}(1), 174–189. \href{https://doi.org/10.1111/j.1749-6632.2009.05336.x}{doi:10.1111/j.1749-6632.2009.05336.x}
+
+Fadus, M. C., Valadez, E. A., Bryant, B. E., Garcia, A. M., Neelon, B., Tomko, R. L., \& Squeglia, L. M. (2021). Racial Disparities in Elementary School Disciplinary Actions: Findings From the ABCD Study. \textit{Journal of the American Academy of Child \& Adolescent Psychiatry, 60}(8), 998–1009. \href{https://doi.org/10.1016/j.jaac.2020.11.017}{doi:10.1016/j.jaac.2020.11.017}
+
+Fan, C. C., Marshall, A., Smolker, H., Gonzalez, M. R., Tapert, S. F., Barch, D. M., Sowell, E., Dowling, G. J., Cardenas-Iniguez, C., Ross, J., Thompson, W. K., \& Herting, M. M. (2021). Adolescent Brain Cognitive Development (ABCD) study Linked External Data (LED): Protocol and practices for geocoding and assignment of environmental data. \textit{Developmental Cognitive Neuroscience, 52}, 101030. \href{https://doi.org/10.1016/j.dcn.2021.101030}{doi:10.1016/j.dcn.2021.101030}
+
+Heeringa, S., \& Berglund, P. (2020). A Guide for Population-based Analysis of the Adolescent Brain Cognitive Development (ABCD) Study Baseline Data. \href{https://doi.org/10.1101/2020.02.10.942011}{doi:10.1101/2020.02.10.942011}
+
+McLaughlin, K. A., Koenen, K. C., Hill, E. D., Petukhova, M., Sampson, N. A., Zaslavsky, A. M., \& Kessler, R. C. (2013). Trauma exposure and Posttraumatic Stress Disorder in a national sample of adolescents. \textit{Journal of the American Academy of Child and Adolescent Psychiatry, 52}(8), 815-830.e14. \href{https://doi.org/10.1016/j.jaac.2013.05.011}{doi:10.1016/j.jaac.2013.05.011}
+
+Petersen, A. C., Crockett, L., Richards, M., \& Boxer, A. (1988). A self-report measure of pubertal status: Reliability, validity, and initial norms. \textit{Journal of Youth and Adolescence, 17}(2), 117–133. \href{https://doi.org/10.1007/BF01537962}{doi:10.1007/BF01537962}
+
+Rakesh, D., Zalesky, A., \& Whittle, S. (2021). Similar but distinct – Effects of different socioeconomic indicators on resting state functional connectivity: Findings from the Adolescent Brain Cognitive Development (ABCD) Study®. \textit{Developmental Cognitive Neuroscience, 51}, 101005. \href{https://doi.org/10.1016/j.dcn.2021.101005}{doi:10.1016/j.dcn.2021.101005}
+
+Saragosa-Harris, N. M., Chaku, N., MacSweeney, N., Guazzelli Williamson, V., Scheuplein, M., Feola, B., Cardenas-Iniguez, C., Demir-Lira, E., McNeilly, E. A., Huffman, L. G., Whitmore, L., Michalska, K. J., Damme, K. S., Rakesh, D., \& Mills, K. L. (2022). A practical guide for researchers and reviewers using the ABCD Study and other large longitudinal datasets. \textit{Developmental Cognitive Neuroscience, 55}, 101115. \href{https://doi.org/10.1016/j.dcn.2022.101115}{doi:10.1016/j.dcn.2022.101115}
+
+Singh, G. K. (2003). Area Deprivation and Widening Inequalities in US Mortality, 1969–1998. \textit{American Journal of Public Health, 93}(7), 1137–1143. \href{https://doi.org/10.2105/AJPH.93.7.1137}{doi:10.2105/AJPH.93.7.1137}
+
+Thompson, W. K., Barch, D. M., Bjork, J. M., Gonzalez, R., Nagel, B. J., Nixon, S. J., \& Luciana, M. (2019). The structure of cognition in 9 and 10 year-old children and associations with problem behaviors: Findings from the ABCD study’s baseline neurocognitive battery. \textit{Developmental Cognitive Neuroscience, 36}, 100606. \href{https://doi.org/10.1016/j.dcn.2018.12.004}{doi:10.1016/j.dcn.2018.12.004}
+
+Townsend, L., Kobak, K., Kearney, C., Milham, M., Andreotti, C., Escalera, J., Alexander, L., Gill, M. K., Birmaher, B., Sylvester, R., Rice, D., Deep, A., \& Kaufman, J. (2020). Development of Three Web-Based Computerized Versions of the Kiddie Schedule for Affective Disorders and Schizophrenia Child Psychiatric Diagnostic Interview: Preliminary Validity Data. \textit{Journal of the American Academy of Child \& Adolescent Psychiatry, 59}(2), 309–325. \href{https://doi.org/10.1016/j.jaac.2019.05.009}{doi:10.1016/j.jaac.2019.05.009}
 
 # SessionInfo
+
+This output describes the environment in which the statistical code was run including package versions.
 
 `r pander(sessionInfo())`
