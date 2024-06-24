@@ -1,7 +1,7 @@
 ---
-title: "Differences in Resting-State Functional MRI Quality Control Recommendations Alter the Representativeness of the Adolescent Brain Cognitive Development (ABCD) Study"
+title: "Balancing data quality and bias: Investigating functional connectivity exclusions in the Adolescent Brain Cognitive Development^℠^ (ABCD Study^®^) across quality control pathways"
 subtitle: "Supplemental Methods and Results"
-author: "Matthew Peverill1, Justin D. Russell, Taylor J. Keding, Hailey M. Rich, Max A. Halvorson, Kevin M. King, Rasmus Birn, & Ryan Herringa"
+author: "Matthew Peverill, Justin D. Russell, Taylor J. Keding, Hailey M. Rich, Max A. Halvorson, Kevin M. King, Rasmus Birn, & Ryan Herringa"
 date: "`r Sys.Date()`"
 output:
   pdf_document:
