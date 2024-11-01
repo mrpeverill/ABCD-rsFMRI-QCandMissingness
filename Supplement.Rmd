@@ -52,6 +52,14 @@ Cognitive ability was operationalized using the matrix reasoning task scaled sco
 
 The NIH Toolbox Flanker Inhibitory Control task score (Weintraub et al., 2013) was included as a behavioral measure of inhibitory control. Scores on this task have been correlated with both parent reported hyperactivity and activity as measured by actigraphy in children with ADHD (Burley et al., 2022). 
 
+### Body Mass Index.
+
+Raw Body Mass Index (BMI) was calculated using measured height and weights using the standard formula:
+
+$\frac{703*W}{H^2}$
+
+Where W is the participants weight in lbs (averaged over up to 3 measurements) and H is the participant's height in inches. The raw value was then standardized, with adjustment for participant age and sex, using WHO norms as implemented by the R package zscorer (Myatt & Guevarra, 2019).
+
 # Code Supplement
 
 This section includes R code used to generate all tables, figures, and statistics used in the main manuscript. Code is visible in the original Rmd document available (together with additional pre-processing code) on osf: https://osf.io/57xer/. The headings are hidden from the rendered document for legibility.
@@ -1478,28 +1486,165 @@ openxlsx::saveWorkbook(tables.xlsx,"Manuscript/Tables/tables.xlsx",overwrite=TRU
 
 # Supplementary Results
 
+```{r}
+supplement.tables.xlsx<-openxlsx::createWorkbook()
+```
+
 ## F-tests for discrete variable-Motion associations
 
 In the manuscript, F tests associated with the discrete variables tested are omitted for brevity. These are printed in Tables 1-2.
 
 ```{r}
-discOut %>% 
+t1<-discOut %>% 
   filter(IV %in% c("filtered_fd_0.1","filtered_fd_0.2","filtered_fd_0.3")) %>% 
   select(DV:MODEL_P) %>% 
   distinct() %>% 
   as_hux() %>% 
   insert_column(c("Threshold",rep(c(".1mm",".2mm",".3mm"),each=6))) %>% 
   set_caption("F tests for relation of discrete DVs with FD after scrubbing, by threshold (pt. 1)")
+
+
+supplement.tables.xlsx<-as_Workbook(t1,
+                     Workbook=supplement.tables.xlsx,
+                     sheet="table1")
+t1
 ```
 
 ```{r}
-discOut %>% 
+t2<-discOut %>% 
   filter(IV %in% c("filtered_fd_0.4","filtered_fd_0.5")) %>% 
   select(DV:MODEL_P) %>% 
   distinct() %>% 
   as_hux() %>% 
   insert_column(c("Threshold",rep(c(".4mm",".5mm"),each=6))) %>% 
   set_caption("F tests for relation of discrete DVs with FD after scrubbing, by threshold (pt. 2)")
+
+supplement.tables.xlsx<-as_Workbook(t2,
+                     Workbook=supplement.tables.xlsx,
+                     sheet="table2")
+
+t2
+```
+
+## Relation of participant characteristics to scan time (post scrubbing)
+
+Participants have a variable number of low-motion frames available for analysis, contingent on the chosen motion threshold and participant motion. This variability may lead to heterogeneity in the stability of functional connectivity estimates between participants. Although five minutes of 'good' scan time is conventionally considered sufficient for a stable estimate, the following analysis examines the relation of scan length (post-scrubbing) to participant characteristics. The results are present in supplemental tables i and ii, which are available in a spreadsheet in the source OSF repository (https://osf.io/57xer/).
+
+```{r}
+# The code is extremely similar to thaht used in the FD models, above. Only y_names is changed.
+# Updated colnames for vars
+y_names = c("s_remaining_0.1","s_remaining_0.2","s_remaining_0.3","s_remaining_0.4","s_remaining_0.5")
+x_names = c("adi","coi","nihtbx_flanker_agecorrected","nihtbx_cryst_agecorrected","nihtbx_totalcomp_agecorrected",
+             "pea_wiscv_tss","pfactor","INT","EXT","interview_age","bmiAgeZ","sex","household.income","p.edu",
+             "race_ethnicity.factor","ksads_factor","pds_category")
+
+contOut = data.frame("IV"=c(),"DV"=c(),"BETA"=c(),"STD_BETA"=c(),"R_SQU"=c(),"T"=c(),"P"=c())
+discOut = data.frame("IV"=c(),"DV"=c(),"F"=c(),"DF_1"=c(),"DF_2"=c(),"MODEL_P"=c(),"CONTRAST"=c(),"BETA"=c(),"SE"=c(),"T-RATIO"=c(),"P"=c())
+
+# Iterate dependent variables (motion thresholds)
+for(y_name in y_names){
+  # Iterate independent variables
+  for(x_name in x_names){
+    
+    # Create dataframe with only variables of interest, remove NAs
+    temp_df = na.omit(data.frame(y_name=df[y_name],x_name=df[x_name]))
+    
+    # For continuous predictors:
+    if( !(x_name %in% c("sex","household.income","p.edu","race_ethnicity.factor","ksads_factor","pds_category"))){
+      # Scale
+      temp_df[x_name] = scale(temp_df[x_name],center=TRUE,scale=TRUE)
+      
+      # Build a model
+      mod = lm(data=temp_df,paste0(y_name,"~",x_name))
+      modTemp = summary(mod)
+      
+      # Append statistics
+      contOut = rbind(contOut,data.frame(
+        "IV"=y_name,"DV"= x_name,"BETA"=modTemp$coefficients[2],"STD_BETA"=as.numeric(QuantPsyc::lm.beta(mod)),"R_SQU"=modTemp$r.squared,
+        "T"=modTemp$coefficients[6],"P"=modTemp$coefficients[8]
+      ))
+    }
+    
+    # For discrete predictors:
+    else{
+      
+      # Build a model
+      mod = lm(data=temp_df,paste0(y_name,"~",x_name))
+      modTemp = summary(mod)
+      #post_hoc = data.frame(emmeans::emmeans(mod,reformulate(x_name, 'pairwise'))$contrasts)[,c(1,2,3,5,6)]
+      post_hoc = data.frame(emmeans::emmeans(mod,reformulate(x_name, 'trt.vs.ctrl1'))$contrasts)[,c(1,2,3,5,6)]
+      
+      
+      # Format and append statistics
+      colnames(post_hoc) = c("CONTRAST","BETA","SE","T-RATIO","P")
+      mod_stats = data.frame("IV"=rep(y_name,nrow(post_hoc)),
+                             "DV"=rep(x_name,nrow(post_hoc)),
+                             "F"=rep(as.numeric(modTemp$fstatistic[1]),nrow(post_hoc)),
+                             "DF_1"=rep(as.numeric(modTemp$fstatistic[2]),nrow(post_hoc)),
+                             "DF_2"=rep(modTemp$fstatistic[3],nrow(post_hoc)),
+                             "MODEL_P"=rep(pf(as.numeric(modTemp$fstatistic[1]),as.numeric(modTemp$fstatistic[2]),
+                                                         as.numeric(modTemp$fstatistic[3]),lower.tail = FALSE),nrow(post_hoc)))
+      discOut = rbind(discOut,cbind(mod_stats,post_hoc))
+    }
+
+  }
+}
+
+# table of sd's for calculating standardized beta
+sdseconds <- t(df %>%
+  summarize(
+    sd_seconds_0.1 = sd(s_remaining_0.1, na.rm = TRUE),
+    sd_seconds_0.2 = sd(s_remaining_0.2, na.rm = TRUE),
+    sd_seconds_0.3 = sd(s_remaining_0.3, na.rm = TRUE),
+    sd_seconds_0.4 = sd(s_remaining_0.4, na.rm = TRUE),
+    sd_seconds_0.5 = sd(s_remaining_0.5, na.rm = TRUE)
+  ))
+
+#Write continuous table
+contHux <-contOut %>% 
+  group_split(IV) %>% 
+  bind_cols() %>%
+  select(2,31:35,24:28,17:21,10:14,3:7) %>% 
+  as_hux() %>% 
+  set_contents(1,everywhere,c("DV",rep(c("b","β","r^2","t","p"),5))) %>% 
+  insert_row(c("",rep(c(".5",".4",".3",".2",".1"),each=5))) %>%
+  merge_across(1,2:6) %>% 
+  merge_across(1,7:11) %>% 
+  merge_across(1,12:16) %>% 
+  merge_across(1,17:21) %>% 
+  merge_across(1,22:26) %>%
+  set_caption("Linear regression parameters for relation of discrete variables to post-scrubbing scan time available (in seconds)")
+  
+
+supplement.tables.xlsx<-as_Workbook(contHux,
+                     Workbook=supplement.tables.xlsx,
+                     sheet="table_i")
+
+#Write discrete table
+discOut$sd.seconds<-rep(sdseconds,each=sum(discOut$IV=="s_remaining_0.1"))
+discOut$sBeta<-discOut$BETA/discOut$sd.seconds
+
+subelements<-split(2:51,ceiling(seq_along(2:51)/10))
+
+discHux<-discOut[,c(1:11,13)] %>% 
+  group_split(IV) %>% 
+  bind_cols() %>% 
+  select(2,51:60,39:48,27:36,15:24,3:12) %>% 
+  as_hux() %>% 
+  set_contents(1,everywhere,c("DV",rep(c("F","df (1)","df (2)","Model p","Contrast","b","sd (seconds)","t","p","β"),5))) %>% 
+  merge_repeated_rows(everywhere,c(1,unlist(lapply(subelements,\(x) {return(x[1:4])})))) %>% 
+  insert_row(c("",rep(c(".5",".4",".3",".2",".1"),each=10))) %>% 
+  merge_across(1,2:11) %>% 
+  merge_across(1,12:21) %>% 
+  merge_across(1,22:31) %>% 
+  merge_across(1,32:41) %>% 
+  merge_across(1,42:51) %>% 
+  set_caption("F tests for relation of discrete variables to post-scrubbing scan time available (in seconds)")
+
+supplement.tables.xlsx<-as_Workbook(discHux,
+                     Workbook=supplement.tables.xlsx,
+                     sheet="table_ii")
+
 ```
 
 ## Multiply at Risk Cell Counts
@@ -1507,11 +1652,17 @@ discOut %>%
 Count of participants with multiple risk factors who were excluded (by condition) appear in Table 3-4.
 
 ```{r}
+supplement.tables.xlsx<-as_Workbook(subtable1,
+                     Workbook=supplement.tables.xlsx,
+                     sheet="table3")
 subtable1
 ```
 
 
 ```{r}
+supplement.tables.xlsx<-as_Workbook(subtable2,
+                     Workbook=supplement.tables.xlsx,
+                     sheet="table4")
 subtable2
 ```
 
@@ -1600,6 +1751,10 @@ CatVar375Hux<-as_hux(CatVar375Table) %>%
   set_number_format(3:nrow(.),4+0:7*2,value="%.2g") %>%
   set_all_padding(1)
 
+supplement.tables.xlsx<-as_Workbook(CatVar375Hux,
+                     Workbook=supplement.tables.xlsx,
+                     sheet="table5")
+
 CatVar375Hux
 ```
 
@@ -1608,7 +1763,7 @@ CatVar375Hux
 Table 6 shows missingness counts in non-imaging variables with more than 50 missing cases.
 
 ```{r}
-df %>% 
+t6<-df %>% 
   select(c(interview_age:household.income,p.edu,race_ethnicity.factor:site_id_l)) %>%
   rename(c("Child Opportunity Index"="coi","Household Income"="household.income","Area Disadvantage Index"="adi","NIH Toolbox Total"="nihtbx_totalcomp_agecorrected","NIH Toolbox Crystalized"="nihtbx_cryst_agecorrected","WISC V"="pea_wiscv_tss","NIH Toolbox Flanker"="nihtbx_flanker_agecorrected","Pubertal Status"="pds_category")) %>% 
   summarise_all(~sum(is.na(.))) %>% 
@@ -1619,6 +1774,11 @@ df %>%
   rename(c("Variable"="name","n Missing"="value")) %>% as_hux() %>% 
   set_header_rows(1,TRUE) %>% 
   set_caption("Behavioral and Demographic variables with >50 missing values")
+
+supplement.tables.xlsx<-as_Workbook(t6,
+                     Workbook=supplement.tables.xlsx,
+                     sheet="table6")
+t6
 ```
 
 ## Adjusted Models -- Forest Plot
@@ -1784,7 +1944,7 @@ ggplot(forestdfB,aes(y=term,color=threshold)) +
 Percent Excluded by site is shown in table 7.
 
 ```{r}
-sitesummary2 %>%  
+t7<-sitesummary2 %>%  
   group_by(sample) %>% 
   filter(Percent_Missing == max(Percent_Missing)) %>%
   mutate(Percent_Missing = Percent_Missing*100) %>% 
@@ -1794,6 +1954,12 @@ sitesummary2 %>%
          "% Excluded"="Percent_Missing") %>% 
   as_hux() %>% 
   set_caption("Sites with Highest \\% Excluded, by Condition")
+
+supplement.tables.xlsx<-as_Workbook(t7,
+                     Workbook=supplement.tables.xlsx,
+                     sheet="table7")
+
+t7
 ```
 
 ### Sensitivity to Site/Scanner Table
@@ -1821,7 +1987,7 @@ sitecoefs<-rbind(cbind(MformatCI(model.ABCC.scanner.results)[33:36,],
       MformatCI(model.QC2.scanner.site.results)[33:36,],
       MformatCI(model.2mm.scanner.site.results)[33:36,]))
 
-as_huxtable(sitecoefs) %>%
+t8<-as_huxtable(sitecoefs) %>%
   insert_row(c("ABCC", "QC2", ".2mm")) %>%
   insert_row(c("Without Site Control", "", "")) %>%
   merge_cells(1, 1:3) %>%
@@ -1846,6 +2012,12 @@ as_huxtable(sitecoefs) %>%
   set_caption("OR of scanner type effect, with and without site control, in condition adjusted models [95\\% CI]. ***: p<.001") %>% 
   set_wrap(TRUE) %>% 
   set_width(1)
+
+supplement.tables.xlsx<-as_Workbook(t8,
+                     Workbook=supplement.tables.xlsx,
+                     sheet="table8")
+
+t8
 ```
 
 ### Sensitivity to Site/Scanner Forest Plots
@@ -1994,14 +2166,38 @@ ggplot(twomm.compdf %>% filter(term %in% sigterms),
 
 ## Current Fast Track QC vs DAIRC recommendations
 
-We state in the text that the currently published fastqc is non-overlapping with DAIRC inclusion recommendations. This table illustrates that non-overlap.
+We state in the text that the currently published fastqc is non-overlapping with DAIRC inclusion recommendations. Tables 9 and 10 illustrate that non-overlap.
 
 The variable 'fastqcok' is TRUE for participants who have at least one T1, rs-fMRI, and field map image marked useable in the current (Last modified 09/09/2019) abcd_fastqc01.csv file. These recommendations are non overlapping with the tabular data list as well as DAIRC recommendations:
 
 ```{r}
-table(df$fastqcok,df$ABCD_rsfmri_QC1,dnn=c("FastQC","Tabulated"))
+t9<-table(df$fastqcok,df$ABCD_rsfmri_QC1,dnn=c("FastQC","Tabulated")) %>% 
+  as_hux() %>% 
+  set_contents(1,2,"Excluded (Tabulated)") %>% 
+  set_contents(1,3,"Included (Tabulated)") %>% 
+  set_contents(2,1,"Excluded (FastQC)") %>% 
+  set_contents(3,1,"Included (FastQC)") %>% 
+  set_caption("FastQC vs Tabulated Data Inclusion/Exclusion")
 
-table(df$fastqcok,df$ABCD_rsfmri_QC2,dnn=c("FastQC","DAIRC"))
+supplement.tables.xlsx<-as_Workbook(t9,
+                     Workbook=supplement.tables.xlsx,
+                     sheet="table9")
+t9
+```
+
+```{r}
+t10<-table(df$fastqcok,df$ABCD_rsfmri_QC2,dnn=c("FastQC","DAIRC"))  %>% 
+  as_hux() %>% 
+  set_contents(1,2,"Excluded (DAIRC Recommended)") %>% 
+  set_contents(1,3,"Included (DAIRC Recommended)") %>% 
+  set_contents(2,1,"Excluded (FastQC)") %>% 
+  set_contents(3,1,"Included (FastQC)") %>% 
+  set_caption("FastQC vs DAIRC recommended Inclusion/Exclusion")
+
+supplement.tables.xlsx<-as_Workbook(t10,
+                     Workbook=supplement.tables.xlsx,
+                     sheet="table10")
+t10
 ```
 
 ## Modeling Trends Across Conditions (H2)
@@ -2011,9 +2207,9 @@ This model specifically looks at changes associated with motion threshold choice
 1. The proposed mixed effects logistic regression created very poor predictions and model fits in simulation, and often did not converge. A linear model of probability proved more stable and accurate and we determined to use that approach (a logistic model is also presented below, but it is similarly flawed).
 2. We proposed that an interaction between a variable and the 'pmiss' variable would indicate that bias was worsening as more data was excluded. However, in simulating this approach we discovered that in the case that there was a bias but it did not worsen as more data was excluded, as, for example, if 2 males were excluded for every female, this would surface as a linear interaction between pmiss and sex in the model. Instead, a worsening bias would be indicated by an interaction between a variable and a polynomial of pmiss, which would indicate a curvilinear trajectory.
 
-(notes from the simulation are available on osf)
+(notes from the simulation are available in the osf repository)
 
-An important remaining question from the simulation study was whether to include an intercept and main effects in the model. As, at pmiss=0, the probability of exclusion ought to be 0 for everyone, one could argue the intercept should be omitted. Model fit is compared between the two models in Table 9. The 'full' model has superior fit characteristics across indices. The GLM model, which is closer to what we originally proposed, does not converge and is not presented. 
+An important remaining question from the simulation study was whether to include an intercept and main effects in the model. As, at pmiss=0, the probability of exclusion ought to be 0 for everyone, one could argue the intercept should be omitted. Model fit is compared between the two models in Table 11. The 'full' model has superior fit characteristics across indices. The GLM model, which is closer to what we originally proposed, does not converge and is not presented. 
 
 ```{r}
 # h2 model with intercepts.
@@ -2092,6 +2288,14 @@ m.h2.stripped <- lmer(
 #   control=glmerControl(optimizer="nloptwrap")
 # )
 
+t11<-performance::compare_performance(m.h2,m.h2.stripped) %>% 
+  as_hux() %>% 
+  set_caption("Comparison of Model Performance Indices")
+
+supplement.tables.xlsx<-as_Workbook(t11,
+                     Workbook=supplement.tables.xlsx,
+                     sheet="table11")
+
 performance::print_md(performance::compare_performance(m.h2,m.h2.stripped))
 ```
 
@@ -2103,7 +2307,7 @@ End   = grep("Fixed effects", temp)-1
 print(unname(temp[0:End]))
 ```
 
-See Table 10-11 for the fixed effects from the omnibus model.
+See Table 12-13 for the fixed effects from the omnibus model.
 
 ```{r h2table}
 pnames<-rownames(h2sum$coefficients)
@@ -2164,6 +2368,13 @@ h2hux[c(1:4,5:24),] %>% set_caption("H2 / Omnibus model fixed effects, pt. 1")
 
 ```{r}
 h2hux[c(1:4,25:nrow(h2hux)),] %>% set_caption("H2 / Omnibus model fixed effects, pt. 2")
+```
+
+
+```{r}
+supplement.tables.xlsx<-as_Workbook(h2hux %>% set_caption("H2 / Omnibus model fixed effects"),
+                     Workbook=supplement.tables.xlsx,
+                     sheet="table12-13")
 ```
 
 ### H2 Marginal Means plotting (Figure 5)
@@ -2268,7 +2479,7 @@ grid::grid.draw(grid::textGrob("Motion Threshold / Proportion of Sample Missing"
 
 Gard (2020) notes that analyses using propensity weighting can be biased when missing data is correlated with population weights. They presented data that association between missingness and population weights are small when considering structural and task-based brain data from ABCD. Here, we repeat these analyses considering rs-fMRI data in each condition.
 
-To the best of our knowledge, Gard et al. used Welch's two-sample t-tests to examine differences in propensity weight between included and excluded groups, and we will do the same here. Results from these tests are shown in table 12.
+To the best of our knowledge, Gard et al. used Welch's two-sample t-tests to examine differences in propensity weight between included and excluded groups, and we will do the same here. Results from these tests are shown in table 14.
 
 ```{r}
 gard_weighting_test<-function(boolvar) {
@@ -2280,9 +2491,14 @@ gard_weighting_test<-function(boolvar) {
 
 weight_ttests<-reduce(lapply(bools[-1],gard_weighting_test),rbind)
 weight_ttests$d<-weight_ttests$delta/sd(df$acs_raked_propensity)
-as_hux(weight_ttests) %>% 
+t14<-as_hux(weight_ttests) %>% 
   insert_column(c("",levelsdf$Level[-1]),after=0) %>% 
   set_caption("Propensity weights of included vs. excluded participants by condition; t-test parameters")
+
+supplement.tables.xlsx<-as_Workbook(t14,
+                     Workbook=supplement.tables.xlsx,
+                     sheet="table14")
+t14
 ```
 
 ## Association of Exclusion with Expanded Demographic Variables
@@ -2291,7 +2507,7 @@ Available information on household income and (especially) race/ethnicity was gr
 
 ### Household Income
 
-Table 13 and 14 presents descriptives and a bivariate model for a SES variable inclusive of all income bins available in the ABCD dataset.
+Table 15 and 16 presents descriptives and a bivariate model for a SES variable inclusive of all income bins available in the ABCD dataset.
 
 
 ```{r}
@@ -2361,6 +2577,10 @@ FullIncomeTableHux<-as_hux(FullIncomeTableTable) %>%
   set_number_format(3:nrow(.),3+0:7*2,value="%.2g") %>%
   set_all_padding(1)
 
+supplement.tables.xlsx<-as_Workbook(FullIncomeTableHux,
+                     Workbook=supplement.tables.xlsx,
+                     sheet="table15")
+
 FullIncomeTableHux
 ```
 
@@ -2393,7 +2613,7 @@ m.bvincome.f <- sub("\n", "]", m.bvincome.f, fixed = TRUE)
 m.bvincome.f <- gsub("].*","]", m.bvincome.f)
 
 
-as_hux(m.bvincome.f) %>%
+t16<-as_hux(m.bvincome.f) %>%
   insert_column(levels(df$household.income.full)[-1]) %>%
   insert_row(
     "Household Income (ref: \\$100-\\$199.9k)", rep(c("OR [95\\% CI]"), 8)) %>%
@@ -2403,6 +2623,10 @@ as_hux(m.bvincome.f) %>%
   set_wrap(TRUE) %>% 
   set_width(1)
 
+supplement.tables.xlsx<-as_Workbook(t16,
+                     Workbook=supplement.tables.xlsx,
+                     sheet="table16")
+t16
 ```
 
 ### Detailed Race/Ethnicity
@@ -2411,7 +2635,7 @@ Census Race/Ethnicity Categories were used in the manuscript for the sake of bre
 
 #### Descriptives
 
-Table 15 describes the many race/ethnicity endorsement variables available in ABCD, cross-referenced against the census race/ethnicity variable used in the manuscript.
+Table 17 describes the many race/ethnicity endorsement variables available in ABCD, cross-referenced against the census race/ethnicity variable used in the manuscript.
 
 ```{r}
 retable1<-df %>% select(race_ethnicity.factor:ethn.iden.hisp) %>%
@@ -2444,12 +2668,18 @@ retable1[,1] <- c("",
                   "Don't Know",
                   "Hispanic")  
 
-retable1[,1:6] %>% 
+t17<-retable1[,1:6] %>% 
   insert_row("","Census Race/Ethnicity","","","","") %>% 
   merge_cells(1,2:6)
+
+supplement.tables.xlsx<-as_Workbook(t17,
+                     Workbook=supplement.tables.xlsx,
+                     sheet="table17")
+
+t17
 ```
 
-Table 16 show descriptives of these variables by condition.
+Table 18 show descriptives of these variables by condition.
 
 ```{r}
 boolTable<-\(data=df,bool=TRUE) {
@@ -2473,7 +2703,7 @@ retable2 <- cbind(
   boolTable(bool = df$gframes_0.2_375),
   boolTable(bool = df$gframes_0.1_375))[-1,] 
 
-retable2 %>%  as_hux() %>%
+t18<-retable2 %>%  as_hux() %>%
   set_number_format(1:nrow(.),seq(1,ncol(.),2),value=fmt_pretty()) %>% 
   set_number_format(1:nrow(.),seq(2,ncol(.),2),value=fmt_pretty(digits=2,format="f")) %>% 
   insert_column(c("White",
@@ -2508,11 +2738,16 @@ retable2 %>%  as_hux() %>%
                ".1","")) %>% 
   set_caption("Granular Race/Ethnicity Data by Condition")
 
+supplement.tables.xlsx<-as_Workbook(t18,
+                     Workbook=supplement.tables.xlsx,
+                     sheet="table18")
+
+t18
 ```
 
 #### Bivariate Models
 
-Finally, Tables 17-19 depict bivariate models for each race/ethnicity endorsement variable by condition.
+Finally, Tables 19-21 depict bivariate models for each race/ethnicity endorsement variable by condition.
 
 ```{r}
 remodels<-lapply(names(df %>% select(race.iden.white:ethn.iden.hisp)),bvmodel,newline="\\newline ")
@@ -2548,6 +2783,10 @@ remodeltable<-as_hux(reduce(remodels,rbind)) %>%
 remodeltable[c(1:2,3:8),] %>% set_caption("Granular Race/Ethnicity Variables: Bivariate Models, Pt. 1") %>% set_label("gran.race.ethn.1") 
 remodeltable[c(1:2,9:14),] %>% set_caption("Granular Race/Ethnicity Variables: Bivariate Models, Pt. 2") %>% set_label("gran.race.ethn.2") 
 remodeltable[c(1:2,15:19),] %>% set_caption("Granular Race/Ethnicity Variables: Bivariate Models, Pt. 3") %>% set_label("gran.race.ethn.3") 
+
+supplement.tables.xlsx<-as_Workbook(remodeltable %>% set_caption("Granular Race/Ethnicity Variables: Bivariate Models"),
+                     Workbook=supplement.tables.xlsx,
+                     sheet="table19-21")
 ```
 
 # Changes since pre-registration
@@ -2559,7 +2798,7 @@ The following changes were made to the analysis plan post-registration:
 * More data was excluded prior to motion filtering than expected and there were more differences in inclusion criteria between ABCD versions than expected. Consequently, three 'QC' conditions were added in addition to the motion thresholds, to provide additional detail to inform study design.
 * The originally planned approach to evaluate H2 was found to be infeasible (See 'H2 Model,' above). In practice, a visual inspection of the data did not support H2 (see H2 Marginal Means Plotting). Specifically, because so much data was missing, biases in the missing data were self-correcting as more data was excluded. I.e., in the event that males were more likely to be excluded than females (which appears to be true in this dataset), the bias is strongest as data is first excluded from the dataset. Once a significantly larger proportion of males have been excluded than females, the over-representation of females in the sample results in their being more likely to be excluded. At the extreme, when all of the data is excluded, there is no bias).
 
-Here, we present the analyses originally proposed as written, excepting H2. Specifically, we present results from adjusted models without the BMI variable in the motion scrubbing conditions in Tables 20-21.
+Here, we present the analyses originally proposed as written, excepting H2. Specifically, we present results from adjusted models without the BMI variable in the motion scrubbing conditions in Tables 22-23.
 
 ```{r}
 model.h1prereg.5mm<-glm(!gframes_0.5_375 ~ sex + household.income + p.edu + race_ethnicity.factor + ksads_factor + pds_category + adi.z + coi.z + nihtbx_flanker_agecorrected.z + nihtbx_cryst_agecorrected.z + nihtbx_totalcomp_agecorrected.z + pea_wiscv_tss.z + pfactor.z + INT.z + EXT.z + interview_age.z ,data=df,family="binomial")
@@ -2595,7 +2834,6 @@ model.h1prereg.1mm.results<-cbind(confint(model.h1prereg.1mm,level=.95),model.h1
 model.h1prereg.1mm.results<-cbind(model.h1prereg.1mm.results,pcorrect(coef(summary(model.h1prereg.1mm))[,4]))
 ```
 
-### Pre-registered Condition (Adjusted) Model Tables
 
 ```{r}
 Mformat2<-\(m) {
@@ -2669,7 +2907,20 @@ h1prereghux[c(1:2,3:20),] %>%
 
 h1prereghux[c(1:2,21:38),] %>%
   set_caption("Adjusted Models Output, as Pre-registered (Pt. 2). ***: p<.001; **: p<.01; *:p<.05") %>% set_label("PreRegModel2")
+
+supplement.tables.xlsx<-as_Workbook(h1prereghux %>% set_caption("Adjusted Models Output, as Pre-registered. ***: p<.001; **: p<.01; *:p<.05"),
+                     Workbook=supplement.tables.xlsx,
+                     sheet="table22-23")
 ```
+
+## Save Tables
+
+Supplemental tables are additionally available in an attached xlsx file.
+
+```{r}
+openxlsx::saveWorkbook(supplement.tables.xlsx,"Supplemental_Tables_editable.xlsx",overwrite=TRUE)
+```
+
 
 # Supplemental References
 
